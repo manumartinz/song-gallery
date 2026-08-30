@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#07070a" />
+    <meta
+      name="description"
+      content="Canciones que recomiendo. No es un reproductor: es una selección mía, en fragmentos."
+    />
+    <title>Música · Manu A. Martínez</title>
+
+    <!--
+      Tarjeta de previsualización al compartir el enlace.
+
+      El dominio va a pelo en `og:url`, `og:image` y el canonical porque los
+      rastreadores NO resuelven rutas relativas ni ejecutan JavaScript. Si el
+      dominio cambia, son estas tres líneas.
+
+      Por lo mismo, la tarjeta es siempre la misma independientemente de la
+      playlist: variarla exigiría generar el HTML en el servidor.
+
+      La imagen la dibuja `api/og.js` y se cachea un año en el edge.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Manu A. Martínez" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:title" content="Música · Manu A. Martínez" />
+    <meta
+      property="og:description"
+      content="Canciones que recomiendo. No es un reproductor: es una selección mía, en fragmentos."
+    />
+    <meta property="og:url" content="https://music.manuelmartinez.ar/" />
+    <meta property="og:image" content="https://music.manuelmartinez.ar/api/og" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://music.manuelmartinez.ar/" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://i.scdn.co" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

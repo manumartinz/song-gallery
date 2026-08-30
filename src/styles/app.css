@@ -1,0 +1,1791 @@
+@import './tokens.css';
+
+/* ---------- Reset ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  /* Barra de scroll oculta: se navega con rueda, teclado y arrastre. El
+     cursor de agarre compensa la falta de indicador de posicion. */
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Mientras se arrastra, todo el documento muestra la mano cerrada. */
+body.is-dragging-body,
+body.is-dragging-body * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+/* ---------- Fondo difuminado ---------- */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: var(--ink);
+  pointer-events: none;
+}
+
+/* Sin `filter` y sin escalar: la textura llega ya difuminada desde el canvas
+   (lib/blurArt.js). Difuminar aqui salia carisimo, porque el navegador
+   rasteriza el contenido filtrado a la escala final y lo rehace en cada frame
+   que haya que componer. */
+.backdrop__layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden; /* el margen del hijo no debe asomar por los bordes */
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-in-out);
+  will-change: opacity;
+}
+
+.backdrop__layer--on {
+  opacity: 1;
+}
+
+/* La textura vive aqui y no en la capa, que reserva su transicion de opacidad
+   para el cruce entre canciones. El margen le da sitio para derivar sin
+   descubrir el borde. */
+.backdrop__drift {
+  position: absolute;
+  inset: -8%;
+  background-position: center;
+  background-size: cover;
+}
+
+/* Plan B: no se pudo preparar la textura (portada sin CORS). Se difumina en
+   CSS, que es el camino caro, pero solo se toma en ese caso.
+   El margen va por `inset` y no por un transform: la deriva ya ocupa el
+   transform de este elemento y lo pisaria. */
+.backdrop__drift--raw {
+  inset: -16%;
+  filter: blur(64px) saturate(1.65) brightness(0.72);
+}
+
+/* Deriva lentisima mientras suena: quita la sensacion de foto pegada. Solo se
+   anima el desplazamiento, nunca la escala, que obligaria a rasterizar a otra
+   resolucion en cada frame. El recorrido cabe en el margen del -8%.
+
+   Se declara SIEMPRE y lo que se conmuta es si corre o esta pausada. Ponerla
+   solo mientras suena hacia que el fondo saltase al darle al play y otra vez al
+   pausar. */
+.backdrop__drift {
+  animation: drift 38s var(--ease-in-out) infinite alternate;
+  animation-play-state: paused;
+}
+
+/* `will-change` solo mientras suena: permanente reservaria memoria de video
+   para algo que casi siempre esta quieto. */
+.backdrop--playing .backdrop__drift {
+  animation-play-state: running;
+  will-change: transform;
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(-2.2%, -1.6%, 0);
+  }
+  to {
+    transform: translate3d(2.2%, 1.8%, 0);
+  }
+}
+
+.backdrop__vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 0%, rgba(7, 7, 10, 0.55) 62%, rgba(7, 7, 10, 0.92) 100%),
+    linear-gradient(180deg, rgba(7, 7, 10, 0.82) 0%, rgba(7, 7, 10, 0.35) 32%, rgba(7, 7, 10, 0.72) 100%);
+}
+
+/* Grano de pelicula. El blend obliga a componer el fondo en una superficie
+   comun en cada frame; es barato porque debajo solo hay una textura pequeña,
+   pero seria lo primero que quitar si vuelve a notarse pesadez al reproducir. */
+.backdrop__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+}
+
+/* ---------- Estructura ---------- */
+
+.shell {
+  position: relative;
+  z-index: 1;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--gap-md) var(--shell-x);
+  /* Sin backdrop-filter a proposito: al ser una barra fija sobre contenido que
+     se desplaza, el navegador tendria que recalcular el desenfoque en cada
+     frame del scroll. El degradado ya da contraste de sobra. */
+  background: linear-gradient(180deg, rgba(7, 7, 10, 0.92) 0%, rgba(7, 7, 10, 0) 100%);
+}
+
+.wordmark {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.wordmark b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Titulo de la playlist: aparece centrado cuando el <h1> sale de pantalla. */
+.topbar__title {
+  justify-self: center;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition:
+    opacity var(--dur-mid) var(--ease-out),
+    transform var(--dur-mid) var(--ease-out);
+}
+
+.topbar__title--on {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.topbar__title--on:hover {
+  color: var(--accent);
+}
+
+.topbar__right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gap-md);
+  min-width: 0;
+}
+
+/* ---------- Menu de playlists ---------- */
+
+.menu {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.menu__tab {
+  position: relative;
+  padding: 0.3rem 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.menu__tab:hover {
+  color: var(--text-muted);
+}
+
+.menu__tab--on {
+  color: var(--text);
+}
+
+.menu__tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  width: 100%;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--dur-mid) var(--ease-out);
+}
+
+.menu__tab--on::after {
+  transform: scaleX(1);
+}
+
+.menu__add {
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: border-color var(--dur-fast), color var(--dur-fast), transform var(--dur-fast) var(--ease-out);
+}
+
+.menu__add:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+  transform: rotate(90deg);
+}
+
+.menu__form {
+  display: flex;
+  gap: var(--gap-xs);
+  align-items: center;
+}
+
+.menu__input {
+  width: min(46vw, 300px);
+  padding: 0.42rem 0.7rem;
+  font: inherit;
+  font-size: 0.78rem;
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: border-color var(--dur-fast);
+}
+
+.menu__input::placeholder {
+  color: var(--text-faint);
+}
+
+.menu__input:focus {
+  outline: none;
+  border-color: var(--line-strong);
+}
+
+/* ---------- Conmutador de vista ---------- */
+
+.views {
+  display: flex;
+  gap: 2px;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.views__btn {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  color: var(--text-faint);
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+
+.views__btn svg {
+  width: 0.72rem;
+  height: 0.72rem;
+  fill: currentColor;
+}
+
+.views__btn:hover {
+  color: var(--text-muted);
+}
+
+.views__btn--on {
+  color: var(--ink);
+  background: var(--bone);
+}
+
+/* ---------- Cabecera de la playlist ---------- */
+
+.intro {
+  padding: clamp(2rem, 7vh, 4.5rem) var(--shell-x) var(--gap-lg);
+  max-width: var(--list-max);
+  margin-inline: auto;
+}
+
+.intro__eyebrow {
+  font-size: 0.62rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 0 0 var(--gap-sm);
+}
+
+.intro__head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  flex-wrap: wrap;
+}
+
+.intro__title {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.02;
+}
+
+.intro__meta {
+  margin: var(--gap-sm) 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  max-width: 56ch;
+  line-height: 1.5;
+}
+
+/* Boton de aleatorio */
+.shuffle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+  padding: 0.42rem 0.95rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.shuffle svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--dur-mid) var(--ease-out);
+}
+
+.shuffle:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--bone);
+  border-color: var(--bone);
+}
+
+.shuffle:hover:not(:disabled) svg {
+  transform: rotate(180deg);
+}
+
+.shuffle:active:not(:disabled) svg {
+  animation: spin var(--dur-slow) var(--ease-in-out);
+}
+
+.shuffle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Buscador y orden ---------- */
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  max-width: var(--list-max);
+  margin: var(--gap-lg) auto 0;
+  padding: 0 var(--shell-x);
+}
+
+.tools__search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 1 1 18rem;
+  min-width: 0;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--line);
+  transition: border-color var(--dur-fast);
+}
+
+.tools__search:focus-within {
+  border-color: var(--line-strong);
+}
+
+.tools__search svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: none;
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.tools__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.tools__input::placeholder {
+  color: var(--text-faint);
+}
+
+.tools__input:focus {
+  outline: none;
+}
+
+/* El aspa nativa del type=search desentona con el resto. */
+.tools__input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.tools__count {
+  flex: none;
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.tools__sorts {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  flex-wrap: wrap;
+}
+
+.tools__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0;
+  font-size: 0.66rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  border-bottom: 1px solid transparent;
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.tools__sort:hover {
+  color: var(--text-muted);
+}
+
+.tools__sort--on {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tools__dir {
+  font-size: 0.72rem;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.sentinel {
+  height: 1px;
+}
+
+/* ---------- Lista ---------- */
+
+.list {
+  max-width: var(--list-max);
+  margin-inline: auto;
+  padding: 0 var(--shell-x) var(--gap-xl);
+  list-style: none;
+  /* Permanente, no solo mientras se arrastra: si se activa al cruzar el
+     umbral de 6 px, el navegador ya ha empezado a seleccionar. */
+  user-select: none;
+  /* Indica que se puede desplazar arrastrando con el raton. */
+  cursor: grab;
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: clamp(0.9rem, 2.2vw, 1.6rem);
+  width: 100%;
+  padding: clamp(0.7rem, 1.6vh, 1.15rem) 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  opacity: 0.42;
+  /* Acota el recalculo de estilo y layout a la propia fila. */
+  contain: layout style;
+  transition:
+    opacity var(--dur-hover) var(--ease-out),
+    transform var(--dur-hover) var(--ease-out),
+    padding var(--dur-mid) var(--ease-out);
+  animation: row-rise var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 24ms);
+}
+
+@keyframes row-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* Hover: solo resalta. Opacidad y transform son propiedades de compositor,
+   asi que recorrer la lista no provoca ni un reflujo. */
+.row--focused {
+  opacity: 0.85;
+  transform: translateX(6px);
+}
+
+/* La que suena sigue destacada aunque su ficha este cerrada: puedes tener
+   abierta la de otro tema sin preview mientras esta suena de fondo. */
+.row--current {
+  opacity: 0.85;
+}
+
+/* La fila abierta es la unica que despliega su ficha. Normalmente coincide con
+   la que suena, pero un tema sin preview tambien se puede abrir para leerlo. */
+.row--open {
+  opacity: 1;
+  transform: none;
+  padding-block: clamp(1.2rem, 3vh, 2.1rem);
+}
+
+.row--dead {
+  opacity: 0.2;
+}
+
+.row--dead.row--focused {
+  opacity: 0.4;
+}
+
+/* Al abrir un tema sin preview deja de estar apagado: se va a leer su ficha. */
+.row--dead.row--open {
+  opacity: 0.8;
+}
+
+/* Zona de click a sangre: un unico boton cubre la fila entera, asi los
+   enlaces del detalle no quedan anidados dentro de un boton. */
+.row__hit {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 2px;
+  cursor: grab;
+}
+
+.row > *:not(.row__hit) {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.row a {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* --- Portada --- */
+
+.row__art {
+  position: relative;
+  width: var(--row-art);
+  height: var(--row-art);
+  flex: none;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(244, 241, 234, 0.06);
+  transition: width var(--dur-mid) var(--ease-out), height var(--dur-mid) var(--ease-out);
+}
+
+.row--open .row__art {
+  width: var(--row-art-active);
+  height: var(--row-art-active);
+}
+
+.row__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.row__play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 7, 10, 0.55);
+  opacity: 0;
+  transition: opacity var(--dur-hover) var(--ease-out);
+}
+
+.row--focused .row__play,
+.row--open .row__play {
+  opacity: 1;
+}
+
+.row__play svg {
+  width: 34%;
+  height: 34%;
+  fill: var(--bone);
+}
+
+/* Preview aun resolviendose: un pulso tenue, nunca el aspecto apagado de
+   `row--dead`, que significa "no existe" y es una cosa distinta. */
+.row--pending .row__play {
+  opacity: 0.3;
+  animation: pending-pulse 1.4s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes pending-pulse {
+  from {
+    opacity: 0.18;
+  }
+  to {
+    opacity: 0.48;
+  }
+}
+
+/* --- Texto --- */
+
+.row__main {
+  min-width: 0;
+}
+
+.row__title {
+  margin: 0;
+  font-size: clamp(1.05rem, 2.1vw, 1.55rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.15;
+  transition: font-size var(--dur-mid) var(--ease-out);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row--open .row__title {
+  font-size: clamp(1.5rem, 3.4vw, 2.5rem);
+  white-space: normal;
+}
+
+.row__artist {
+  margin: 0.18rem 0 0;
+  font-size: clamp(0.76rem, 1.3vw, 0.92rem);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__index {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  align-self: start;
+  padding-top: 0.35rem;
+}
+
+.row__time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* --- Ficha desplegable de la cancion que suena --- */
+
+.row__reveal {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-mid) var(--ease-out);
+}
+
+.row--open .row__reveal {
+  grid-template-rows: 1fr;
+}
+
+.row__reveal > div {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.row__details {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.1rem;
+  padding-top: var(--gap-md);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--dur-mid) var(--ease-out) 120ms;
+}
+
+.row--open .row__details {
+  opacity: 1;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.tag--key {
+  color: var(--text-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+
+.tag--badge {
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tag--link {
+  text-decoration: none;
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 1px;
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.tag--link:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.meter {
+  width: 46px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+
+.meter__fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+
+/* ---------- Cuadricula ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(88px, 11vw, 150px), 1fr));
+  gap: 2px;
+  max-width: var(--grid-max);
+  margin-inline: auto;
+  padding: 0 var(--shell-x) var(--gap-xl);
+  list-style: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.cell {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: rgba(244, 241, 234, 0.05);
+  contain: layout style paint;
+  animation: cell-in var(--dur-mid) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 12ms);
+}
+
+@keyframes cell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+.cell__hit {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.cell__hit img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.66) saturate(0.85);
+  transition: filter var(--dur-hover) var(--ease-out), transform var(--dur-mid) var(--ease-out);
+}
+
+.cell--focused .cell__hit img {
+  filter: brightness(1) saturate(1.05);
+  transform: scale(1.06);
+}
+
+.cell--current .cell__hit img {
+  filter: brightness(1) saturate(1.1);
+}
+
+/* Anillo con el color de acento en la que suena. */
+.cell--current::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  pointer-events: none;
+}
+
+.cell--dead .cell__hit img {
+  filter: grayscale(1) brightness(0.4);
+}
+
+/* Velo con el texto: solo al pasar el raton. */
+.cell__veil {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.6rem;
+  text-align: left;
+  background: linear-gradient(180deg, transparent 0%, rgba(7, 7, 10, 0.9) 72%);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity var(--dur-hover) var(--ease-out),
+    transform var(--dur-hover) var(--ease-out);
+}
+
+.cell--focused .cell__veil,
+.cell--current .cell__veil {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cell__title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell__artist {
+  font-size: 0.64rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell__hit img,
+.cell__veil {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Distintivo de la celda que suena. En la cuadricula no hay ficha desplegada,
+   asi que este circulo es lo unico que la identifica de un vistazo. */
+.cell__mark {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  background: rgba(7, 7, 10, 0.78);
+  box-shadow: 0 0 0 1px var(--accent);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.cell__mark svg {
+  width: 0.66rem;
+  height: 0.66rem;
+  fill: var(--accent);
+}
+
+/* Un pelin mas grande mientras suena, para separarlo del estado en pausa. */
+.cell__mark--live {
+  transform: scale(1.08);
+}
+
+.cell__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left;
+  pointer-events: none;
+}
+
+/* ---------- Barra de progreso ---------- */
+
+.scrub {
+  position: relative;
+  margin-top: var(--gap-md);
+  height: 18px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.scrub__track {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent-soft);
+}
+
+.scrub__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  transform: scaleX(var(--progress, 0));
+}
+
+.scrub__head {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--progress, 0) * 100%);
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translateY(-50%) scale(0);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.scrub:hover .scrub__head,
+.scrub:focus-visible .scrub__head {
+  transform: translateY(-50%) scale(1);
+}
+
+.scrub__times {
+  position: absolute;
+  right: 0;
+  top: -0.95rem;
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+/* ---------- Ecualizador ---------- */
+
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+}
+
+.eq span {
+  width: 2px;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: bottom;
+  animation: eq-bounce 900ms var(--ease-in-out) infinite alternate;
+}
+
+.eq span:nth-child(2) {
+  animation-delay: 180ms;
+  animation-duration: 720ms;
+}
+
+.eq span:nth-child(3) {
+  animation-delay: 360ms;
+  animation-duration: 1040ms;
+}
+
+/* Mientras el analizador manda de verdad, la animacion enlatada se aparta:
+   una animacion en curso gana a los estilos en linea, y las alturas reales que
+   escribe EqBars por frame no llegarian a verse. */
+.eq--live span {
+  animation: none;
+}
+
+.eq--idle span {
+  animation-play-state: paused;
+  transform: scaleY(0.3);
+}
+
+@keyframes eq-bounce {
+  from {
+    transform: scaleY(0.22);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* ---------- Estados ---------- */
+
+.state {
+  max-width: 36rem;
+  margin: 20vh auto;
+  padding-inline: var(--shell-x);
+  text-align: center;
+}
+
+.state__title {
+  margin: 0 0 var(--gap-sm);
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.state__body {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.state__body code {
+  font-size: 0.8em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  background: rgba(244, 241, 234, 0.1);
+}
+
+.state__form {
+  display: flex;
+  gap: var(--gap-xs);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: var(--gap-lg);
+}
+
+.state__button {
+  padding: 0.42rem 1.1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+
+.state__button:hover {
+  background: var(--bone);
+  color: var(--ink);
+}
+
+.skeleton {
+  max-width: var(--list-max);
+  margin-inline: auto;
+  padding: 8vh var(--shell-x) 0;
+  list-style: none;
+}
+
+.skeleton li {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.shimmer {
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(244, 241, 234, 0.05) 25%,
+    rgba(244, 241, 234, 0.12) 37%,
+    rgba(244, 241, 234, 0.05) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* ---------- Splash de bienvenida ---------- */
+
+/* Opaco sobre todo lo demas: al disolverse descubre el fondo difuminado, que
+   para entonces ya ha cargado. La duracion total vive AQUI y solo aqui; el
+   componente se entera de que acabo por `animationend`. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 10; /* por encima de la barra (3) y del hint (4) */
+  display: grid;
+  place-content: center;
+  gap: var(--gap-sm);
+  padding-inline: var(--shell-x);
+  background: var(--ink);
+  /* No se puede saltar, asi que tampoco debe estorbar: mientras se funde, los
+     clicks pasan de largo y la galeria ya es usable por debajo. */
+  pointer-events: none;
+  animation: splash-out var(--dur-slow) var(--ease-out) forwards 3600ms;
+}
+
+.splash__line {
+  margin: 0;
+  max-width: 20ch;
+  font-size: clamp(1.5rem, 5.5vw, 3rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.12;
+  animation: splash-line var(--dur-slow) var(--ease-out) backwards;
+}
+
+.splash__line--1 {
+  animation-delay: 320ms;
+}
+
+/* La segunda baja de tono: jerarquia sin meter otro tamaño. */
+.splash__line--2 {
+  color: var(--text-muted);
+  animation-delay: 1150ms;
+}
+
+/* La firma entra la ultima y en otro registro: pequeña y espaciada, como un
+   pie, para que se lea como quien firma y no como una tercera frase. */
+.splash__sign {
+  margin: var(--gap-md) 0 0;
+  font-size: 0.66rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+  animation: splash-line var(--dur-slow) var(--ease-out) backwards 1900ms;
+}
+
+@keyframes splash-line {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes splash-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* ---------- Mini-reproductor ---------- */
+
+/* Fija abajo, por encima de la barra superior (3) y del hint (4). El splash
+   (10) debe seguir tapandola. Siempre montada mientras haya algo sonando: se
+   esconde con transform y opacidad para poder entrar y salir animada. */
+.mini {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 5;
+  width: min(100%, var(--list-max));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--gap-md);
+  row-gap: 0.55rem;
+  padding: 0.7rem var(--shell-x) calc(0.7rem + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  /* Mismo motivo que la barra superior: fija sobre contenido que se desplaza,
+     asi que nada de backdrop-filter. */
+  background: rgba(7, 7, 10, 0.92);
+  opacity: 0;
+  transform: translate(-50%, 100%);
+  pointer-events: none;
+  transition:
+    opacity var(--dur-mid) var(--ease-out),
+    transform var(--dur-mid) var(--ease-out);
+}
+
+.mini--in {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+/* Portada y textos: pulsarlo devuelve el scroll a la fila que suena. */
+.mini__id {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  min-width: 0;
+  text-align: left;
+}
+
+.mini__art {
+  width: 2.6rem;
+  height: 2.6rem;
+  flex: none;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(244, 241, 234, 0.06);
+}
+
+.mini__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mini__text {
+  display: grid;
+  min-width: 0; /* sin esto el texto largo revienta la rejilla en vez de cortarse */
+}
+
+.mini__title,
+.mini__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini__title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.mini__artist {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.mini__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mini__controls button {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: color var(--dur-hover) var(--ease-out), background var(--dur-hover) var(--ease-out);
+}
+
+.mini__controls button:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.mini__controls svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* El de play va relleno, como en las filas, y algo mas grande: es el principal. */
+.mini__play {
+  color: var(--text);
+}
+
+.mini__play svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: currentColor;
+  stroke: none;
+}
+
+/* La barra ocupa el ancho entero, debajo de los otros dos bloques. */
+.mini__bar {
+  grid-column: 1 / -1;
+}
+
+/* El margen superior de .scrub es para la ficha desplegada; aqui la rejilla ya
+   pone su propia separacion. */
+.mini__bar .scrub {
+  margin-top: 0;
+}
+
+/* Los tiempos van sobre la barra y ahi arriba chocarian con el titulo. */
+.mini__bar .scrub__times {
+  display: none;
+}
+
+/* ---------- Hint flotante ---------- */
+
+.hint {
+  position: fixed;
+  left: 50%;
+  bottom: 1.4rem;
+  z-index: 4;
+  transform: translateX(-50%);
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  /* Mismo motivo que la barra: es fija sobre contenido que se desplaza. */
+  background: rgba(7, 7, 10, 0.82);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  animation: fade-in var(--dur-slow) var(--ease-out) backwards 700ms;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+/* ---------- Footer ---------- */
+
+.foot {
+  max-width: var(--list-max);
+  margin-inline: auto;
+  padding: clamp(3rem, 12vh, 7rem) var(--shell-x) clamp(3rem, 10vh, 6rem);
+  text-align: center;
+}
+
+/* Entrada escalonada. Se dispara al asomar en pantalla (useInView), no al
+   cargar: el footer existe en el DOM desde el primer render. */
+.foot__rule,
+.foot__label,
+.foot__actions,
+.foot__note,
+.foot__social,
+.foot__credits {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-out);
+}
+
+.foot--in .foot__rule { opacity: 1; transform: none; }
+.foot--in .foot__label { opacity: 1; transform: none; transition-delay: 90ms; }
+.foot--in .foot__actions { opacity: 1; transform: none; transition-delay: 180ms; }
+.foot--in .foot__note { opacity: 1; transform: none; transition-delay: 270ms; }
+.foot--in .foot__social { opacity: 1; transform: none; transition-delay: 360ms; }
+.foot--in .foot__credits { opacity: 1; transform: none; transition-delay: 450ms; }
+
+.foot__rule {
+  height: 1px;
+  margin-inline: auto;
+  background: var(--line-strong);
+  transform-origin: center;
+}
+
+.foot--in .foot__rule {
+  animation: rule-grow var(--dur-slow) var(--ease-out) both;
+}
+
+@keyframes rule-grow {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.foot__label {
+  margin: var(--gap-lg) 0 var(--gap-md);
+  font-size: 0.62rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.foot__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gap-sm);
+}
+
+.foot__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 1.3rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+}
+
+.foot__action svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--dur-mid) var(--ease-out);
+}
+
+.foot__action:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--bone);
+  border-color: var(--bone);
+}
+
+.foot__action:hover:not(:disabled) svg {
+  transform: rotate(180deg);
+}
+
+.foot__action:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Nota personal. Es la unica frase corrida del pie, asi que va en caja baja y
+   con medida de lectura: el resto son etiquetas en versalitas y compite mal. */
+.foot__note {
+  max-width: 46ch;
+  margin: var(--gap-xl) auto 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-wrap: pretty; /* evita que la ultima linea quede con una sola palabra */
+}
+
+.foot__social {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gap-md);
+  margin-top: var(--gap-md);
+}
+
+/* Deliberadamente mas callados que .foot__action: son un enlace a otro sitio,
+   no una accion de la galeria. Cuatro pildoras iguales aplanarian la jerarquia. */
+.foot__social a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.foot__social a:hover {
+  color: var(--accent);
+}
+
+.foot__social svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.foot__credits {
+  margin: var(--gap-xl) 0 0;
+  font-size: 0.68rem;
+  line-height: 1.7;
+  color: var(--text-faint);
+}
+
+.foot__credits a {
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.foot__credits a:hover {
+  color: var(--text-muted);
+  border-color: var(--line-strong);
+}
+
+/* ---------- Movil ---------- */
+
+@media (max-width: 720px) {
+  .topbar {
+    grid-template-columns: 1fr auto;
+    row-gap: var(--gap-sm);
+  }
+
+  /* En movil el titulo pegajoso SUSTITUYE a la marca: comparten celda.
+     Antes la marca se tapaba con un rectangulo opaco pintado encima, y eso solo
+     funciona mientras el titulo sea mas largo que ella; con nombres de playlist
+     cortos asomaba la cola de la marca por detras. Ahora se retira de verdad.
+     Sigue ocupando su hueco (opacidad, no display), asi que la columna no
+     cambia de ancho al aparecer el titulo y no hay salto. */
+  .wordmark {
+    grid-row: 1;
+    grid-column: 1;
+    transition: opacity var(--dur-mid) var(--ease-out);
+  }
+
+  .topbar--stuck .wordmark {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .topbar__title {
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+    max-width: 60vw;
+  }
+
+  /* En una sola fila: con el menu reducido a un boton ya no hace falta apilar,
+     y la barra deja de comerse dos lineas de alto. */
+  .topbar__right {
+    grid-row: 1;
+    grid-column: 2;
+    gap: var(--gap-sm);
+  }
+
+  /* El desplegable se ancla a la derecha de la barra. */
+  .menu--compact {
+    position: relative;
+  }
+
+  .menu__trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    max-width: 42vw;
+    padding: 0.32rem 0.6rem 0.32rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .menu__trigger--on {
+    border-color: var(--line-strong);
+  }
+
+  /* El nombre de la playlist activa se recorta antes que deformar el boton. */
+  .menu__current {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .menu__trigger svg {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+
+  .menu__trigger--on svg {
+    transform: rotate(180deg);
+  }
+
+  .menu__panel {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    right: 0;
+    z-index: 4; /* sobre la barra (3), por debajo del mini (5) */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--gap-xs);
+    min-width: max(11rem, 44vw);
+    max-width: 78vw;
+    padding: var(--gap-sm);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    /* Opaco, no translucido: esta sobre la lista, que se desplaza por debajo. */
+    background: rgba(12, 12, 16, 0.98);
+    animation: menu-drop var(--dur-fast) var(--ease-out);
+  }
+
+  @keyframes menu-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+
+  /* Dentro del panel las pestañas son filas, no una tira horizontal. */
+  .menu__panel .menu__tab {
+    padding: 0.5rem 0.2rem;
+    text-align: left;
+  }
+
+  /* El subrayado animado se disenio para pestañas en linea; aqui estorba. */
+  .menu__panel .menu__tab::after {
+    display: none;
+  }
+
+  .menu__panel .menu__add {
+    align-self: flex-start;
+  }
+
+  .menu__panel .menu__form {
+    width: 100%;
+  }
+
+  /* El ancho base (min(46vw, 300px)) desbordaria el panel: aqui reparte el
+     hueco que quede junto al boton de enviar. */
+  .menu__panel .menu__input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+
+  .row {
+    grid-template-columns: auto 1fr;
+  }
+
+  .row__index,
+  .row__time {
+    display: none;
+  }
+
+  .row__reveal {
+    grid-column: 1 / -1;
+  }
+
+  .hint {
+    display: none;
+  }
+}
+
+/* El hover no existe en tactil: evita estados pegados tras un tap. */
+@media (hover: none) {
+  .row--focused {
+    opacity: 0.42;
+    transform: none;
+  }
+
+  .row--open,
+  .row--open.row--focused {
+    opacity: 1;
+  }
+
+  .row--focused .row__play {
+    opacity: 0;
+  }
+
+  .row--open .row__play {
+    opacity: 1;
+  }
+
+  .cell--focused .cell__veil {
+    opacity: 0;
+  }
+
+  .cell--current .cell__veil {
+    opacity: 1;
+  }
+
+  .cell--focused .cell__hit img {
+    filter: brightness(0.66) saturate(0.85);
+    transform: none;
+  }
+}

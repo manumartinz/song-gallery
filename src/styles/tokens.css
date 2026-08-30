@@ -1,0 +1,65 @@
+/* Tokens de diseno: paleta casi monocroma, una sola familia tipografica,
+   escala de espaciado y curvas de easing compartidas por toda la interfaz. */
+
+:root {
+  /* Color */
+  --ink: #07070a;
+  --bone: #f4f1ea;
+  --text: var(--bone);
+  --text-muted: rgba(244, 241, 234, 0.56);
+  --text-faint: rgba(244, 241, 234, 0.3);
+  --line: rgba(244, 241, 234, 0.12);
+  --line-strong: rgba(244, 241, 234, 0.28);
+
+  /* Acento: lo sobreescribe en caliente el color dominante de la portada. */
+  --accent: #f4f1ea;
+  --accent-soft: rgba(244, 241, 234, 0.16);
+
+  /* Tipografia */
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --tracking-wide: 0.18em;
+  --tracking-tight: -0.03em;
+
+  /* Espaciado */
+  --gap-xs: 0.35rem;
+  --gap-sm: 0.7rem;
+  --gap-md: 1.25rem;
+  --gap-lg: 2rem;
+  --gap-xl: 3.5rem;
+  --shell-x: clamp(1.15rem, 5vw, 4rem);
+
+  /* Movimiento */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* El resalte al pasar el raton necesita ser casi instantaneo: por encima de
+     unos 150 ms se percibe como lentitud aunque no se pierda ni un frame. */
+  --dur-hover: 110ms;
+  --dur-fast: 160ms;
+  --dur-mid: 260ms;
+  --dur-slow: 620ms;
+
+  /* Medidas */
+  --row-art: clamp(3rem, 5.5vw, 4rem);
+  --row-art-active: clamp(4.75rem, 9vw, 7rem);
+  --list-max: 1000px;
+  --grid-max: 1500px;
+}
+
+/* Sin animaciones para quien las tenga desactivadas en el sistema. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-hover: 1ms;
+    --dur-fast: 1ms;
+    --dur-mid: 1ms;
+    --dur-slow: 1ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
