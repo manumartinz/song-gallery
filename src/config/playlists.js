@@ -12,7 +12,6 @@
  * bloqueadas en la API pública y devuelven 404.
  */
 export const PLAYLISTS = [
-  { label: 'fffavs', ref: 'https://open.spotify.com/playlist/3u2qWJuAvm0NwMWpRJgUcG' },
-  { label: 'trip up', ref: 'https://open.spotify.com/playlist/6O285yjCB4RTJzDadCI93P' },
   { label: 'show up', ref: 'https://open.spotify.com/playlist/3tCIRspolGNY9rj5pMaDbc' },
+  { label: 'trip up', ref: 'https://open.spotify.com/playlist/6O285yjCB4RTJzDadCI93P' },
 ];
