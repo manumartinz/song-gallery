@@ -53,10 +53,24 @@ function toEntries(list) {
   return list
     .map((item) => {
       const id = parsePlaylistRef(item.ref);
-      return id ? { id, label: item.label || 'Playlist', ref: item.ref } : null;
+      return id ? { id, label: item.label || 'Playlist', ref: item.ref, sort: item.sort } : null;
     })
     .filter(Boolean);
 }
+
+/**
+ * Criterio con el que abre cada playlist fija, declarado en la config del repo.
+ *
+ * Se resuelve desde PLAYLISTS y no desde `entries` a proposito: las playlists
+ * que añade el visitante no traen configuracion, y meter `entries` en las
+ * dependencias del efecto de carga lo volveria a disparar cada vez que alguien
+ * añade una.
+ */
+const DEFAULT_SORTS = new Map(
+  toEntries(PLAYLISTS)
+    .filter((entry) => entry.sort && SORTS[entry.sort])
+    .map((entry) => [entry.id, entry.sort]),
+);
 
 function readCustomEntries() {
   try {
@@ -289,10 +303,13 @@ export default function App() {
     retriedKeys.current = new Set();
     setHoverIndex(null);
     setKeyIndex(0);
-    // Playlist nueva, criterios en blanco: mantenerlos confundiria mas que ayudar.
+    /* Playlist nueva, criterios en blanco: mantenerlos confundiria mas que
+       ayudar. "En blanco" es el orden que declare la config, y `original` para
+       las que no declaren ninguno. */
     setQuery('');
-    setSortBy('original');
-    setSortDir(1);
+    const initialSort = DEFAULT_SORTS.get(currentId) ?? 'original';
+    setSortBy(initialSort);
+    setSortDir(SORTS[initialSort].dir);
 
     /* Los previews llegan despues, por tramos, para que la lista aparezca en
        cuanto responde Spotify en vez de esperar a 200 resoluciones. Vive dentro
@@ -512,7 +529,7 @@ export default function App() {
         return;
       }
       setSortBy(key);
-      setSortDir(key === 'year' || key === 'added' ? -1 : 1);
+      setSortDir(SORTS[key]?.dir ?? 1);
     },
     [sortBy],
   );

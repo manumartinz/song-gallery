@@ -19,6 +19,7 @@ export default function PlaylistMenu({ entries, activeId, onSelect, adding, setA
   const [value, setValue] = useState('');
   const inputRef = useRef(null);
   const rootRef = useRef(null);
+  const formRef = useRef(null);
 
   useEffect(() => {
     if (adding) inputRef.current?.focus();
@@ -54,6 +55,24 @@ export default function PlaylistMenu({ entries, activeId, onSelect, adding, setA
     };
   }, [open]);
 
+  /* El formulario solo se cerraba al enviar o con Escape, asi que en escritorio
+     se quedaba clavado abierto: no hay boton para desdecirse. Un click fuera lo
+     cierra, igual que el desplegable.
+
+     En movil el formulario vive dentro del panel: si este se cierra, `formRef`
+     ya no apunta a nada y el siguiente click de fuera tambien cancela el alta,
+     que es justo lo que se quiere. */
+  useEffect(() => {
+    if (!adding) return undefined;
+
+    const onPointerDown = (event) => {
+      if (!formRef.current?.contains(event.target)) setAdding(false);
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [adding, setAdding]);
+
   const handleSubmit = (event) => {
     event.preventDefault();
     const trimmed = value.trim();
@@ -85,7 +104,7 @@ export default function PlaylistMenu({ entries, activeId, onSelect, adding, setA
       ))}
 
       {adding ? (
-        <form className="menu__form" onSubmit={handleSubmit}>
+        <form className="menu__form" ref={formRef} onSubmit={handleSubmit}>
           <input
             ref={inputRef}
             className="menu__input"

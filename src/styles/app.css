@@ -574,7 +574,10 @@ body.is-dragging-body * {
 .row {
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  /* Cuatro columnas, una por hijo en flujo: numero, portada, texto y duracion.
+     Con tres, la duracion no cabia en la primera linea y el auto-flow la
+     empujaba a una fila implicita debajo del numero. */
+  grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: clamp(0.9rem, 2.2vw, 1.6rem);
   width: 100%;
@@ -717,8 +720,12 @@ body.is-dragging-body * {
 
 /* --- Texto --- */
 
+/* Titulo y artista alineados a la derecha: el bloque queda pegado a la duracion
+   y la lista se lee por el borde derecho. Van juntos a proposito; alinear solo
+   el titulo dejaria el artista suelto debajo y parece un descuido. */
 .row__main {
   min-width: 0;
+  text-align: right;
 }
 
 .row__title {

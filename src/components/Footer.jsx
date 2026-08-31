@@ -35,8 +35,8 @@ export default function Footer({ playlistUrl, onRandom, canShuffle }) {
       {/* Cierra el circulo que abre el splash: alli la recomendacion es mia,
           aqui se le devuelve el turno a quien haya llegado hasta el final. */}
       <p className="foot__note">
-        Si llegaste hasta acá, escribime. Me encantaría saber qué te pareció, o que la próxima me
-        la recomiendes vos.
+        Si llegaste hasta acá, escribime. Me encantaría saber qué te pareció, o que la próxima
+        canción me la recomiendes vos.
       </p>
 
       <div className="foot__social">

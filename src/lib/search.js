@@ -47,12 +47,18 @@ export function makeFilter(query) {
  * No estan ni popularidad ni duracion, y es deliberado: son metricas de la
  * plataforma y esto se presenta como una seleccion personal. `added` ocupa su
  * sitio con algo que si dice algo de quien la hizo: en que orden las guardo.
+ *
+ * `dir` es el sentido con el que entra cada criterio: en fechas se espera lo
+ * ultimo primero, en nombres la A antes que la Z. Vive aqui y no en el
+ * manejador del boton para que la config de playlists pueda arrancar con un
+ * criterio ya puesto sin repetir la regla.
  */
 export const SORTS = {
-  original: { label: 'Original', compare: null },
-  year: { label: 'Año', compare: (a, b) => (a.year ?? 0) - (b.year ?? 0) },
+  original: { label: 'Original', compare: null, dir: 1 },
+  year: { label: 'Año', compare: (a, b) => (a.year ?? 0) - (b.year ?? 0), dir: -1 },
   added: {
     label: 'Añadidas',
+    dir: -1,
     /* `Date.parse` de null o de una fecha invalida da NaN, y un comparador que
        devuelve NaN deja el orden indefinido: se cae a 0, que las manda al
        principio (o al final, segun el sentido) en bloque. */
@@ -60,6 +66,7 @@ export const SORTS = {
   },
   artist: {
     label: 'Artista',
+    dir: 1,
     compare: (a, b) => normalize(a.artistLine).localeCompare(normalize(b.artistLine)),
   },
 };
