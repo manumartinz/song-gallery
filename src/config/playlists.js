@@ -4,6 +4,9 @@
  * Las playlists que añadas desde la web con el botón "+" se guardan aparte, en
  * el navegador de cada visitante; estas viven en el repo y las ve todo el mundo.
  *
+ * El orden importa: la PRIMERA es la que abre por defecto, cuando se entra sin
+ * `?p=` en la URL. Para cambiar de portada, se mueve arriba y ya.
+ *
  * Los links van sin el `?si=...` a propósito: ese parámetro es un token de
  * compartir y no pinta nada en un repositorio público.
  *
@@ -17,6 +20,7 @@
  * sentido que si pulsaras el botón: las fechas, de lo último a lo primero.
  */
 export const PLAYLISTS = [
+  { label: 'lately', ref: 'https://open.spotify.com/playlist/7wVdbtC5ELxWO2QNWz4RN1' },
   { label: 'show up', ref: 'https://open.spotify.com/playlist/3tCIRspolGNY9rj5pMaDbc' },
   { label: 'trip up', ref: 'https://open.spotify.com/playlist/6O285yjCB4RTJzDadCI93P', sort: 'added' },
 ];
