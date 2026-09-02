@@ -31,6 +31,15 @@ import { disableGraph, isGraphEnabled, resumeGraph, routeDeck } from '../lib/ana
 const CROSSFADE_MS = 420;
 const POSITION_HZ = 20; // suficiente para una barra fluida sin re-render de mas
 
+/* Techo de volumen. Los previews de Deezer e iTunes vienen normalizados muy
+   arriba y a todo trapo asustan a quien entra con los cascos puestos. No hay
+   control en pantalla a proposito: `volume` es de solo lectura en Safari de
+   iOS, asi que un mando visible estaria muerto justo donde mas molesta el
+   susto. Aqui el techo se ignora en silencio y el resto de navegadores lo
+   respetan. Es tambien el destino del fundido: la rampa apunta a este valor,
+   no a 1. */
+const MAX_VOLUME = 0.75;
+
 /* `position` NO esta aqui a proposito: se refresca 20 veces por segundo y en el
    estado obligaba a re-renderizar todo el arbol a esa frecuencia. Viaja por
    suscripcion (`subscribePosition`). La duracion si vive en el estado: cambia
@@ -120,7 +129,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     engine.fade = null;
 
     const to = engine.decks[fade.toIndex];
-    if (to) to.volume = 1;
+    if (to) to.volume = MAX_VOLUME;
 
     // Solo se libera el saliente si nadie lo ha reclamado desde entonces.
     if (fade.fromIndex !== -1 && fade.fromIndex !== fade.toIndex) {
@@ -149,7 +158,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
         const progress = fadeMs <= 0 ? 1 : Math.min(1, (now - start) / fadeMs);
 
         if (from && from !== to) from.volume = Math.max(0, fromVolume * (1 - progress));
-        to.volume = Math.min(1, progress);
+        to.volume = MAX_VOLUME * progress;
 
         if (progress < 1) {
           engine.fade.raf = requestAnimationFrame(step);
