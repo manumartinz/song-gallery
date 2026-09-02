@@ -1369,7 +1369,20 @@ body.is-dragging-body * {
 /* Opaco sobre todo lo demas: al disolverse descubre el fondo difuminado, que
    para entonces ya ha cargado. La duracion total vive AQUI y solo aqui; el
    componente se entera de que acabo por `animationend`. */
+/* Toda la linea de tiempo del saludo sale de estas cuatro cifras. Estan aqui
+   arriba porque el saludo es una coreografia: si se tocan sueltas por el
+   archivo, una entra tarde, otra se va pronto y deja de leerse como un gesto.
+
+   entrada                       0 -> 1540ms   (tres lineas escalonadas)
+   lectura                    1540 -> 2800ms
+   desvanecido               2800 -> 3600ms
+   Total 3.6s. El seguro de Splash.jsx (5000ms) queda por encima. */
 .splash {
+  --splash-in: 460ms; /* lo que tarda cada linea en entrar */
+  --splash-step: 470ms; /* separacion entre una linea y la siguiente */
+  --splash-hold: 2800ms; /* cuando arranca la salida */
+  --splash-out: 800ms; /* lo que dura el desvanecido */
+
   position: fixed;
   inset: 0;
   z-index: 10; /* por encima de la barra (3) y del hint (4) */
@@ -1378,10 +1391,14 @@ body.is-dragging-body * {
   gap: var(--gap-sm);
   padding-inline: var(--shell-x);
   background: var(--ink);
-  /* No se puede saltar, asi que tampoco debe estorbar: mientras se funde, los
-     clicks pasan de largo y la galeria ya es usable por debajo. */
+  /* No se puede saltar, asi que tampoco debe estorbar: desde el primer
+     fotograma los clicks pasan de largo y la galeria ya es usable por debajo. */
   pointer-events: none;
-  animation: splash-out var(--dur-slow) var(--ease-out) forwards 3600ms;
+  /* LINEAL y no `--ease-out` como el resto del sitio. Esa curva es una
+     expo-out: se comeria el 90% de la opacidad en el primer cuarto del tiempo
+     y un desvanecido a secas se veria como un corte. Aqui no hay nada mas
+     ocurriendo, asi que el fundido tiene que repartirse parejo. */
+  animation: splash-out var(--splash-out) linear forwards var(--splash-hold);
 }
 
 .splash__line {
@@ -1391,17 +1408,20 @@ body.is-dragging-body * {
   font-weight: 600;
   letter-spacing: var(--tracking-tight);
   line-height: 1.12;
-  animation: splash-line var(--dur-slow) var(--ease-out) backwards;
+  animation: splash-line var(--splash-in) var(--ease-out) backwards;
 }
 
 .splash__line--1 {
-  animation-delay: 320ms;
+  animation-delay: 140ms;
 }
 
-/* La segunda baja de tono: jerarquia sin meter otro tamaño. */
+/* La segunda baja de tono: jerarquia sin meter otro tamaño. Va mas ancha que
+   la primera porque es el doble de larga: con las 20ch de arriba se partia en
+   tres renglones y perdia el ritmo de frase. */
 .splash__line--2 {
+  max-width: 26ch;
   color: var(--text-muted);
-  animation-delay: 1150ms;
+  animation-delay: calc(140ms + var(--splash-step));
 }
 
 /* La firma entra la ultima y en otro registro: pequeña y espaciada, como un
@@ -1413,7 +1433,8 @@ body.is-dragging-body * {
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   color: var(--text-faint);
-  animation: splash-line var(--dur-slow) var(--ease-out) backwards 1900ms;
+  animation: splash-line var(--splash-in) var(--ease-out) backwards
+    calc(140ms + var(--splash-step) * 2);
 }
 
 @keyframes splash-line {
