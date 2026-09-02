@@ -1,46 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import useMediaQuery from '../hooks/useMediaQuery.js';
+import isHardReload from '../lib/hardReload.js';
 
 const HINT_KEY = 'song-gallery:nav-hint-seen';
 const HINT_MS = 9000;
-
-/**
- * ¿Se ha entrado con una recarga FORZADA (Ctrl+Shift+R)?
- *
- * El navegador no lo cuenta: `navigation.type` dice "reload" tanto para F5
- * como para Ctrl+Shift+R. La unica diferencia observable es la cache, y hay
- * que mirarla con cuidado, porque Vercel sirve los bundles con
- * `max-age=0, must-revalidate`: en F5 tampoco salen de cache a secas, se
- * revalidan. Los tres casos se distinguen comparando los dos tamaños:
- *
- *   cache pura   transferSize 0
- *   304          0 < transferSize < encodedBodySize   (solo viajan cabeceras)
- *   200 de red   transferSize > encodedBodySize       (cabeceras + cuerpo)
- *
- * O sea: hubo recarga forzada si el CUERPO de todo lo propio viajo de verdad.
- *
- * Se filtra por origen porque `transferSize` de un tercero sin
- * Timing-Allow-Origin (las fuentes de Google, las portadas de Spotify) es
- * siempre 0, y por tamaño porque en un fichero de 200 bytes las cabeceras de
- * un 304 ya pesan mas que el cuerpo y darian un falso positivo.
- *
- * Es un heuristico, no una medida: sirve para volver a ver el aviso sin ir a
- * borrar la clave a mano, no para nada de lo que dependa la pagina.
- */
-function isHardReload() {
-  try {
-    const [nav] = performance.getEntriesByType('navigation');
-    if (nav?.type !== 'reload') return false;
-
-    const own = performance
-      .getEntriesByType('resource')
-      .filter((entry) => entry.name.startsWith(location.origin) && entry.encodedBodySize > 1024);
-
-    return own.length > 0 && own.every((entry) => entry.transferSize > entry.encodedBodySize);
-  } catch {
-    return false; // navegador sin Resource Timing: se queda en el aviso de una vez
-  }
-}
 
 /**
  * Selector de playlist: pestañas en escritorio, desplegable en movil.

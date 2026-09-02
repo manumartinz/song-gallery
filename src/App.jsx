@@ -19,6 +19,7 @@ import {
   parsePlaylistRef,
 } from './lib/api.js';
 import { dominantColor } from './lib/color.js';
+import isHardReload from './lib/hardReload.js';
 import { makeFilter, SORTS } from './lib/search.js';
 import useDragScroll from './hooks/useDragScroll.js';
 import usePlayer from './hooks/usePlayer.js';
@@ -173,10 +174,18 @@ export default function App() {
     }
   });
 
-  /* Saludo de bienvenida: una sola vez por navegador. `?intro` lo fuerza, que es
-     la unica forma de volver a verlo una vez marcado. */
+  /* Saludo de bienvenida: una sola vez por navegador. Vuelve a salir con
+     `?intro` o con una recarga forzada (Ctrl+Shift+R), el mismo gesto con el
+     que reaparece el aviso del nav: quien quiere volver a ver como recibe la
+     pagina hace eso, no borra claves en DevTools.
+
+     Aqui se pregunta en el inicializador, o sea en el primer render, cuando de
+     lo propio solo han cargado el bundle y la hoja de estilos. Basta: los dos
+     pesan de sobra para el filtro y en una recarga forzada ambos viajan
+     enteros. */
   const [showSplash, setShowSplash] = useState(() => {
     if (new URLSearchParams(location.search).has('intro')) return true;
+    if (isHardReload()) return true;
     try {
       return !localStorage.getItem(INTRO_KEY);
     } catch {
