@@ -26,8 +26,8 @@ export default function handler() {
           width: '100%',
           height: '100%',
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
+          alignItems: 'center',
+          justifyContent: 'center',
           padding: '80px',
           background: INK,
           /* Lavado calido que recuerda al fondo de la galeria. Lineal y no
@@ -38,44 +38,14 @@ export default function handler() {
           fontFamily: 'sans-serif',
         },
       },
+      /* Solo el nombre. La tarjeta llevaba las dos frases del saludo, y eran
+         dos sitios donde mantener la misma copia: al cambiar una quedaba
+         diciendo lo que la web ya no dice. El titulo y la descripcion de
+         `index.html` cuentan de que va esto; la imagen solo firma. */
       h(
         'div',
-        {
-          style: {
-            display: 'flex',
-            fontSize: 26,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: 'rgba(244,241,234,0.56)',
-          },
-        },
+        { style: { display: 'flex', fontSize: 96, letterSpacing: '-0.03em' } },
         'Manu A. Martínez',
-      ),
-      h(
-        'div',
-        { style: { display: 'flex', flexDirection: 'column' } },
-        h(
-          'div',
-          { style: { display: 'flex', fontSize: 76, letterSpacing: '-0.03em' } },
-          'Esto no es un reproductor.',
-        ),
-        h(
-          'div',
-          {
-            style: {
-              display: 'flex',
-              fontSize: 76,
-              letterSpacing: '-0.03em',
-              color: 'rgba(244,241,234,0.56)',
-            },
-          },
-          'Es una recomendación mía.',
-        ),
-      ),
-      h(
-        'div',
-        { style: { display: 'flex', fontSize: 26, color: 'rgba(244,241,234,0.3)' } },
-        'music.manuelmartinez.ar',
       ),
     ),
     {

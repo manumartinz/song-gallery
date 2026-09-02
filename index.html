@@ -20,7 +20,9 @@
       Por lo mismo, la tarjeta es siempre la misma independientemente de la
       playlist: variarla exigiría generar el HTML en el servidor.
 
-      La imagen la dibuja `api/og.js` y se cachea un año en el edge.
+      La imagen la dibuja `api/og.js` y se cachea un año en el edge, así que
+      redibujarla no basta: hay que subir el `?v=` de `og:image` o el edge y los
+      rastreadores (WhatsApp, Twitter, Slack) seguirán sirviendo la anterior.
     -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Manu A. Martínez" />
@@ -31,7 +33,7 @@
       content="Canciones que recomiendo. No es un reproductor: es una selección mía, en fragmentos."
     />
     <meta property="og:url" content="https://music.manuelmartinez.ar/" />
-    <meta property="og:image" content="https://music.manuelmartinez.ar/api/og" />
+    <meta property="og:image" content="https://music.manuelmartinez.ar/api/og?v=2" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
