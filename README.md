@@ -39,7 +39,14 @@ públicas creadas por un usuario: las de Spotify (Discover Weekly, Top 50, Radar
 están bloqueadas en la API pública.
 
 Desde la web también se puede pegar el link de cualquier playlist con el botón
-`+`; ésas se guardan en el navegador de cada visitante.
+`+`; ésas se guardan en el navegador de cada visitante, que puede tener hasta
+seis y quitarlas cuando quiera.
+
+De una playlist pegada se muestran 49 canciones y una salida a Spotify para el
+resto. Las del repo se ven enteras. La diferencia no es estética: resolver los
+previews de una playlist ajena de 200 pistas son cinco funciones y doscientas
+consultas a Deezer, y hay un límite de peticiones por IP que conviene gastar en
+lo que el visitante vino a escuchar.
 
 ## Desplegar
 
