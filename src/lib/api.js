@@ -34,6 +34,37 @@ function writeCache(key, data) {
   }
 }
 
+/**
+ * Error de red con el codigo HTTP colgado.
+ *
+ * Sin el status, quien llama no puede distinguir "este tramo ha fallado" de
+ * "me estan frenando", y la diferencia importa: lo primero se reintenta con el
+ * siguiente tramo, lo segundo obliga a parar.
+ */
+function httpError(message, status) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+/**
+ * Olvida la playlist cacheada.
+ *
+ * La usa el borrado de playlists pegadas: cada payload ocupa del orden de
+ * 170 KB en una de 200 pistas, y hasta ahora nada los desalojaba salvo volver
+ * a leerlos ya caducados. Al quitar la playlist del menu no queda ninguna
+ * ocasion de releerla, asi que su hueco se quedaria ocupado para siempre.
+ */
+export function dropPlaylistCache(ref) {
+  const id = parsePlaylistRef(ref);
+  if (!id) return;
+  try {
+    localStorage.removeItem(PREFIX + id);
+  } catch {
+    /* sin almacenamiento no habia nada que borrar */
+  }
+}
+
 /** Extrae el id de playlist de una URL, un URI o un id pelado. */
 export function parsePlaylistRef(ref) {
   if (!ref) return null;
@@ -56,7 +87,10 @@ export async function fetchPlaylist(ref, { signal } = {}) {
   const body = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(body.error || `No se pudo cargar la playlist (${response.status}).`);
+    throw httpError(
+      body.error || `No se pudo cargar la playlist (${response.status}).`,
+      response.status,
+    );
   }
 
   writeCache(id, body);
@@ -78,7 +112,10 @@ export async function fetchPreviews(id, offset, limit, { signal } = {}) {
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error || `No se pudieron resolver los previews (${response.status}).`);
+    throw httpError(
+      body.error || `No se pudieron resolver los previews (${response.status}).`,
+      response.status,
+    );
   }
 
   const body = await response.json();

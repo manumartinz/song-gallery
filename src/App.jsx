@@ -6,11 +6,18 @@ import PlaylistMenu from './components/PlaylistMenu.jsx';
 import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
 import TrackList from './components/TrackList.jsx';
+import MoreOnSpotify from './components/MoreOnSpotify.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import { EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
 import { PLAYLISTS } from './config/playlists.js';
-import { cachePlaylist, fetchPlaylist, fetchPreviews, parsePlaylistRef } from './lib/api.js';
+import {
+  cachePlaylist,
+  dropPlaylistCache,
+  fetchPlaylist,
+  fetchPreviews,
+  parsePlaylistRef,
+} from './lib/api.js';
 import { dominantColor } from './lib/color.js';
 import { makeFilter, SORTS } from './lib/search.js';
 import useDragScroll from './hooks/useDragScroll.js';
@@ -23,6 +30,17 @@ const CUSTOM_KEY = 'song-gallery:custom';
 const VIEW_KEY = 'song-gallery:view';
 const INTRO_KEY = 'song-gallery:intro-seen'; // lo escribe Splash; aqui solo se consulta
 const PREVIEW_CHUNK = 40; // tramo con el que se van pidiendo los previews
+
+/* Topes de las playlists que pega el visitante. Las del repo no los tienen: son
+   la recomendacion, y se ven enteras.
+
+   El de canciones no es una cifra estetica. Una playlist ajena de 200 pistas se
+   lleva cinco tramos de previews (cinco funciones, doscientas resoluciones
+   contra Deezer) y ~170 KB del almacenamiento del visitante, para algo que ni
+   siquiera es lo que ha venido a ver. Con 49 son dos tramos, y el que quiera la
+   suya entera la tiene a un click en Spotify. */
+const MAX_CUSTOM = 6;
+const CUSTOM_TRACKS = 49;
 
 /**
  * Fusiona un tramo de previews en la playlist.
@@ -59,6 +77,41 @@ function toEntries(list) {
 }
 
 /**
+ * Lo mismo para las que pega el visitante, que tienen otra forma.
+ *
+ * El nombre no se sabe al añadirlas —solo hay un link— asi que `label` nace en
+ * null y se rellena cuando responde Spotify. `custom` es lo que luego decide
+ * quien lleva su aspa para borrarla y a quien se le aplica el tope de pistas.
+ *
+ * El recorte a MAX_CUSTOM se hace tambien AQUI, al leer, y no solo al añadir:
+ * en el navegador de quien ya paso por la web hay listas guardadas de antes de
+ * que existiera el tope.
+ */
+function toCustomEntries(list) {
+  return (Array.isArray(list) ? list : [])
+    .map((item) => {
+      const id = parsePlaylistRef(item?.ref ?? item?.id);
+      if (!id) return null;
+      /* "Pegada" era la etiqueta fija de todas antes de que se les pusiera su
+         nombre. Tratarla como "sin nombre" hace que quien ya tenga playlists
+         guardadas reciba el nombre real la primera vez que las abra, en vez de
+         quedarse con el rotulo viejo para siempre. */
+      const label = item.label && item.label !== 'Pegada' ? item.label : null;
+      return { id, label, ref: id, custom: true };
+    })
+    .filter(Boolean)
+    .slice(0, MAX_CUSTOM);
+}
+
+function persistCustom(list) {
+  try {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
+  } catch {
+    /* sin persistencia, sigue funcionando en esta sesion */
+  }
+}
+
+/**
  * Criterio con el que abre cada playlist fija, declarado en la config del repo.
  *
  * Se resuelve desde PLAYLISTS y no desde `entries` a proposito: las playlists
@@ -75,7 +128,7 @@ const DEFAULT_SORTS = new Map(
 function readCustomEntries() {
   try {
     const raw = localStorage.getItem(CUSTOM_KEY);
-    return raw ? toEntries(JSON.parse(raw)) : [];
+    return raw ? toCustomEntries(JSON.parse(raw)) : [];
   } catch {
     return [];
   }
@@ -94,6 +147,15 @@ export default function App() {
       return true;
     });
   }, [fixedEntries, customEntries]);
+
+  /* Guardar aqui y no dentro de los updaters de setCustomEntries: son tres los
+     que la tocan (añadir, ponerle nombre y borrar), y un efecto secundario
+     dentro de una funcion que React puede invocar dos veces se multiplicaria
+     por tres. Esto lo escribe una sola vez por cambio, y el de mas al montar
+     reescribe lo mismo que se acaba de leer. */
+  useEffect(() => {
+    persistCustom(customEntries);
+  }, [customEntries]);
 
   // La playlist inicial sale de ?p= para que la vista sea compartible.
   const [currentId, setCurrentId] = useState(() => {
@@ -157,6 +219,13 @@ export default function App() {
   const focusedIndex = hoverIndex ?? keyIndex;
   const currentTrack = tracks[playingIndex] || null;
 
+  /* Cuantas canciones se enseñan de la playlist que se esta viendo. Las del
+     repo, todas; las pegadas, hasta CUSTOM_TRACKS. */
+  const trackLimit = useMemo(
+    () => (entries.find((entry) => entry.id === currentId)?.custom ? CUSTOM_TRACKS : Infinity),
+    [entries, currentId],
+  );
+
   /* Lo que se ve, ya filtrado y ordenado. Cada entrada conserva su indice
      ORIGINAL: esa es la identidad con la que trabaja todo el estado (que suena,
      que esta abierta, cuales fallaron, el mapa de nodos). Si el estado fuese por
@@ -174,8 +243,13 @@ export default function App() {
       items = [...items].reverse();
     }
 
-    return items;
-  }, [tracks, query, sortBy, sortDir]);
+    /* El tope de las pegadas se aplica AQUI, al final y no al cargar, por dos
+       razones: se corta lo que se ve y no lo que se tiene (buscar sigue mirando
+       la playlist entera, y luego se queda con las 49 primeras que encajen), y
+       todo lo demas —teclado, findPlayable, "al azar", el registro de filas—
+       ya trabaja sobre `visible` y hereda el corte sin enterarse. */
+    return items.length > trackLimit ? items.slice(0, trackLimit) : items;
+  }, [tracks, query, sortBy, sortDir, trackLimit]);
 
   const { register, scrollTo, getNode } = useRowRegistry();
   const { onPointerDown, wasDragged } = useDragScroll({ enabled: !reducedMotion });
@@ -318,7 +392,17 @@ export default function App() {
     const streamPreviews = async (payload) => {
       if (payload.tracks.every((track) => track.previewUrl !== undefined)) return;
 
-      const total = payload.totalCount ?? payload.trackCount;
+      /* `trackCount` es lo que el server MANDO; `totalCount` es lo que tiene la
+         playlist en Spotify, que puede ser mucho mas porque /api/playlist corta
+         en 200. Recorrer el segundo era pedir tramos de canciones que no estan
+         en el payload: con una playlist de 5.000 salian 125 peticiones de las
+         que servian 5, y `mergePreviews` tiraba el resto por no encontrar los
+         ids. Ademas reventaba el limite por IP y dejaba al visitante sin poder
+         cargar nada durante diez minutos.
+
+         El tope de las pegadas entra tambien aqui: si solo se enseñan 49, pedir
+         previews de la 50 en adelante es gastar por gusto. */
+      const total = Math.min(payload.trackCount ?? payload.tracks.length, trackLimit);
       let merged = payload;
 
       for (let offset = 0; offset < total; offset += PREVIEW_CHUNK) {
@@ -334,7 +418,11 @@ export default function App() {
           setData((prev) => (prev && prev.id === payload.id ? mergePreviews(prev, previews) : prev));
         } catch (cause) {
           if (controller.signal.aborted || cause.name === 'AbortError') return;
-          // Un tramo que falle no debe tumbar los demas.
+          /* Un 429 no es un tramo que ha fallado, es el limite por IP diciendo
+             que pares: seguir pidiendo solo consume la ventana entera para que
+             la siguiente playlist tampoco cargue. Los demas errores si son de
+             su tramo y no deben tumbar a los otros. */
+          if (cause.status === 429) return;
         }
       }
 
@@ -359,7 +447,10 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [currentId, stop]);
+    /* `trackLimit` es un numero, no un objeto: solo cambia de valor al pasar de
+       una playlist del repo a una pegada, y eso ya trae un `currentId` nuevo.
+       Ponerlo aqui no dispara recargas de mas. */
+  }, [currentId, stop, trackLimit]);
 
   /* Mantiene ?p= y ?t= sincronizados sin ensuciar el historial, para que la
      barra de direcciones sea siempre un enlace valido de lo que se esta viendo:
@@ -664,24 +755,68 @@ export default function App() {
        veces por segundo mientras sonaba algo. */
   }, [focusedIndex, visible, scrollTo, handleSelect, toggle, seek, getPosition, player.trackId]);
 
-  const handleAddPlaylist = useCallback((value) => {
-    const id = parsePlaylistRef(value);
-    if (!id) {
-      setError('Ese link no parece una playlist de Spotify.');
-      return;
-    }
-    setCustomEntries((prev) => {
-      if (prev.some((entry) => entry.id === id)) return prev;
-      const next = [...prev, { id, label: 'Pegada', ref: id }];
-      try {
-        localStorage.setItem(CUSTOM_KEY, JSON.stringify(next));
-      } catch {
-        /* sin persistencia, sigue funcionando en esta sesion */
+  /**
+   * Devuelve el motivo del rechazo, o null si la playlist entro.
+   *
+   * Devolver el mensaje en vez de llamar a setError es a proposito: setError
+   * cambia la pagina entera por ErrorState, asi que avisar de un link mal
+   * pegado borraba de la pantalla la playlist que se estuviera escuchando. El
+   * menu pinta esto junto al campo, donde se ha cometido el error.
+   */
+  const handleAddPlaylist = useCallback(
+    (value) => {
+      const id = parsePlaylistRef(value);
+      if (!id) return 'Ese link no parece una playlist de Spotify.';
+
+      /* Si es una de las de la casa se va a ella y no se guarda nada. Sin esto
+         ocupaba un hueco del tope: `entries` deduplica, asi que la copia no
+         llegaba a salir en el menu y no habia aspa con la que recuperarlo. */
+      if (fixedEntries.some((entry) => entry.id === id)) {
+        setCurrentId(id);
+        return null;
       }
-      return next;
-    });
-    setCurrentId(id);
-  }, []);
+
+      const known = customEntries.some((entry) => entry.id === id);
+      if (!known && customEntries.length >= MAX_CUSTOM) {
+        return `Solo caben ${MAX_CUSTOM} playlists pegadas. Quitá una para añadir otra.`;
+      }
+
+      // Repetir una que ya esta no es un error: se va a ella y ya.
+      if (!known) setCustomEntries((prev) => [...prev, { id, label: null, ref: id, custom: true }]);
+      setCurrentId(id);
+      return null;
+    },
+    [customEntries, fixedEntries],
+  );
+
+  /**
+   * Quita una playlist pegada.
+   *
+   * Se lleva por delante su copia en cache: al desaparecer del menu ya no hay
+   * ninguna ocasion de releerla, asi que sus ~170 KB se quedarian ocupados
+   * hasta que alguien vaciase el almacenamiento a mano.
+   */
+  const handleRemovePlaylist = useCallback(
+    (id) => {
+      setCustomEntries((prev) => prev.filter((entry) => entry.id !== id));
+      dropPlaylistCache(id);
+      // Si era la que se estaba viendo hay que ir a alguna parte: la primera.
+      setCurrentId((prev) => (prev === id ? (fixedEntries[0]?.id ?? null) : prev));
+    },
+    [fixedEntries],
+  );
+
+  /* Las pegadas nacen sin nombre: al añadirlas solo hay un link. Cuando Spotify
+     contesta se le pone el suyo, y el efecto de persistencia lo guarda para que
+     la proxima visita ya lo tenga sin esperar a que carguen. */
+  useEffect(() => {
+    if (!data?.id || !data.name) return;
+    setCustomEntries((prev) =>
+      prev.some((entry) => entry.id === data.id && entry.label !== data.name)
+        ? prev.map((entry) => (entry.id === data.id ? { ...entry, label: data.name } : entry))
+        : prev,
+    );
+  }, [data]);
 
   /* ---------- Render ---------- */
 
@@ -697,6 +832,11 @@ export default function App() {
 
   // El <h1> salio de pantalla y su titulo pasa a la barra superior.
   const stuckTitle = Boolean(titleStuck && data);
+
+  /* Lo que queda fuera, contra el total REAL de Spotify. Suma las dos podas: la
+     del server (200) y la de las pegadas (49). `totalCount` ya viajaba en la
+     respuesta desde siempre y hasta ahora no lo miraba nadie. */
+  const hiddenCount = Math.max(0, (data?.totalCount ?? 0) - Math.min(tracks.length, trackLimit));
 
   const viewProps = {
     items: visible,
@@ -747,6 +887,7 @@ export default function App() {
               adding={adding}
               setAdding={setAdding}
               onSubmit={handleAddPlaylist}
+              onRemove={handleRemovePlaylist}
               /* Solo con la playlist ya en pantalla y el splash fuera: durante
                  el saludo no se ve la barra, y el aviso se gastaria a solas. */
               hint={Boolean(data) && !showSplash}
@@ -800,7 +941,9 @@ export default function App() {
                 sortDir={sortDir}
                 onSort={handleSort}
                 count={visible.length}
-                total={tracks.length}
+                /* Lo que se puede llegar a ver, no lo que se tiene cargado: en
+                   una pegada decir "3 de 200" cuando el maximo son 49 miente. */
+                total={Math.min(tracks.length, trackLimit)}
               />
 
               {/* Centinela: cuando pasa por encima del viewport, el titulo
@@ -809,10 +952,14 @@ export default function App() {
 
               {visible.length === 0 ? (
                 <NoMatches query={query} onClear={() => setQuery('')} />
-              ) : view === 'grid' ? (
-                <TrackGrid {...viewProps} />
               ) : (
-                <TrackList {...viewProps} />
+                <>
+                  {view === 'grid' ? <TrackGrid {...viewProps} /> : <TrackList {...viewProps} />}
+                  {/* Con una busqueda puesta no sale: lo que falta ahi es
+                      "resultados", y mezclarlo con el total de la playlist solo
+                      confunde. */}
+                  {query ? null : <MoreOnSpotify count={hiddenCount} url={data.externalUrl} />}
+                </>
               )}
 
               <Footer

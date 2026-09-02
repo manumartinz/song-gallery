@@ -242,8 +242,22 @@ body.is-dragging-body * {
   justify-content: flex-end;
 }
 
+/* Envoltorio de pestaña + aspa. Existe porque el aspa no puede ir dentro del
+   boton (un boton dentro de otro es HTML invalido) y necesitan compartir el
+   hover para que el aspa aparezca al acercarse a la pestaña. */
+.menu__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
 .menu__tab {
   position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
   padding: 0.3rem 0;
   font-size: 0.72rem;
   font-weight: 500;
@@ -251,6 +265,60 @@ body.is-dragging-body * {
   text-transform: uppercase;
   color: var(--text-faint);
   transition: color var(--dur-fast) var(--ease-out);
+}
+
+/* Los nombres de las pegadas los pone Spotify y son mucho mas largos que los
+   de la config: sin tope, una sola empuja las demas a otra linea. */
+.menu__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 9rem;
+}
+
+/* Marca de que la playlist la ha traido quien mira, no la casa. En minuscula y
+   sin el espaciado de la pestaña, para que se lea como una nota al margen y no
+   como parte del nombre. */
+.menu__own {
+  flex: none;
+  font-size: 0.6rem;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  font-style: italic;
+  color: var(--text-faint);
+  opacity: 0.75;
+}
+
+.menu__tab--on .menu__own {
+  color: var(--text-muted);
+}
+
+/* Solo aparece al acercarse: son playlists de usar y tirar, pero tener un aspa
+   permanente al lado de cada nombre pesa mucho en una barra tan callada.
+   En tactil no hay hover; el bloque @media (hover: none) del final la fija. */
+.menu__drop {
+  display: grid;
+  place-items: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: none;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  line-height: 1;
+  color: var(--text-faint);
+  opacity: 0;
+  transition: opacity var(--dur-fast), color var(--dur-fast), background-color var(--dur-fast);
+}
+
+.menu__item:hover .menu__drop,
+.menu__item:focus-within .menu__drop {
+  opacity: 1;
+}
+
+.menu__drop:hover {
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.08);
 }
 
 .menu__tab:hover {
@@ -299,9 +367,31 @@ body.is-dragging-body * {
 }
 
 .menu__form {
+  position: relative; /* ancla del aviso de rechazo */
   display: flex;
   gap: var(--gap-xs);
   align-items: center;
+}
+
+/* Por que el link no ha entrado. Cuelga del formulario y no de la pagina: el
+   aviso global sustituye la vista entera, y quedarse sin la playlist que
+   sonaba por pegar mal un enlace era un castigo desmedido.
+
+   Fuera de flujo para no ensanchar la barra superior al aparecer. */
+.menu__error {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 4;
+  max-width: min(20rem, 60vw);
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: rgba(12, 12, 16, 0.98);
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--text);
+  animation: hint-drop var(--dur-mid) var(--ease-out);
 }
 
 .menu__input {
@@ -1481,6 +1571,62 @@ body.is-dragging-body * {
   display: none;
 }
 
+/* ---------- Cierre de una playlist recortada ---------- */
+
+/* Se lee como la fila siguiente aunque no lo sea: va fuera de la <ul> para no
+   meter en el registro de filas, el teclado y la retIcula un elemento sin
+   pista. Por eso hay que recuperar aqui la caja de la lista —mismo ancho y
+   mismo margen lateral— y comerse con un margen negativo el hueco inferior que
+   `.list` (y `.grid`) reservan, o quedaria descolgada en vez de pegada a la
+   ultima fila, que ya pone la linea de separacion con su border-bottom. */
+.more {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--gap-sm);
+  max-width: var(--list-max);
+  margin-inline: auto;
+  margin-top: calc(-1 * var(--gap-xl));
+  padding: clamp(0.85rem, 2vh, 1.3rem) var(--shell-x) var(--gap-xl);
+  color: var(--text-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.more:hover {
+  color: var(--text);
+}
+
+.more__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.more__label svg {
+  width: 0.85rem;
+  height: 0.85rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.more:hover .more__label svg {
+  transform: translate(2px, -2px);
+}
+
+.more__count {
+  font-size: 0.68rem;
+  color: var(--text-faint);
+}
+
 /* ---------- Hint flotante ---------- */
 
 .hint {
@@ -1772,6 +1918,13 @@ body.is-dragging-body * {
     gap: var(--gap-xs);
     min-width: max(11rem, 44vw);
     max-width: 78vw;
+    /* Cuelga de una barra `sticky`, asi que lo que se saliese del viewport
+       quedaba inalcanzable: no hay scroll de pagina que lo rescate. Se scrollea
+       el panel, y `contain` evita que al llegar al final siga la lista de
+       debajo. */
+    max-height: min(60vh, 22rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: var(--gap-sm);
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -1788,9 +1941,32 @@ body.is-dragging-body * {
   }
 
   /* Dentro del panel las pestañas son filas, no una tira horizontal. */
+  .menu__panel .menu__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-sm);
+  }
+
   .menu__panel .menu__tab {
+    flex: 1;
+    min-width: 0;
     padding: 0.5rem 0.2rem;
     text-align: left;
+  }
+
+  /* Como fila hay sitio de sobra: el nombre entero antes que los puntitos. */
+  .menu__panel .menu__label {
+    max-width: none;
+  }
+
+  /* Aqui el aspa esta siempre: en el panel no estorba, y en tactil no hay hover
+     que la saque. */
+  .menu__panel .menu__drop {
+    opacity: 1;
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.95rem;
   }
 
   /* El subrayado animado se disenio para pestañas en linea; aqui estorba. */
@@ -1804,6 +1980,17 @@ body.is-dragging-body * {
 
   .menu__panel .menu__form {
     width: 100%;
+    flex-wrap: wrap;
+  }
+
+  /* En el panel hay ancho y no hay barra que ensanchar: el aviso entra en flujo
+     bajo el campo en vez de flotar. */
+  .menu__panel .menu__error {
+    position: static;
+    max-width: none;
+    width: 100%;
+    border-radius: 10px;
+    animation: none;
   }
 
   /* El ancho base (min(46vw, 300px)) desbordaria el panel: aqui reparte el
@@ -1839,6 +2026,12 @@ body.is-dragging-body * {
 
 /* El hover no existe en tactil: evita estados pegados tras un tap. */
 @media (hover: none) {
+  /* Sin esto el aspa de las playlists pegadas seria inalcanzable con el dedo:
+     solo aparece con el hover, que aqui no llega nunca. */
+  .menu__drop {
+    opacity: 1;
+  }
+
   .row--focused {
     opacity: 0.42;
     transform: none;

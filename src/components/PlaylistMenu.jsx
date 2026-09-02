@@ -66,11 +66,13 @@ export default function PlaylistMenu({
   adding,
   setAdding,
   onSubmit,
+  onRemove,
   hint = false,
 }) {
   const compact = useMediaQuery('(max-width: 720px)');
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState('');
+  const [problem, setProblem] = useState(null);
   const [hintOn, setHintOn] = useState(false);
   const inputRef = useRef(null);
   const rootRef = useRef(null);
@@ -171,11 +173,25 @@ export default function PlaylistMenu({
     return () => node.removeEventListener('pointerdown', dismiss);
   }, [hintOn, compact]);
 
+  // Al cerrar el alta no debe quedar un aviso esperando a la proxima apertura.
+  useEffect(() => {
+    if (!adding) setProblem(null);
+  }, [adding]);
+
   const handleSubmit = (event) => {
     event.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) return;
-    onSubmit(trimmed);
+
+    /* onSubmit devuelve el motivo del rechazo, o null si entro. Se queda aqui,
+       junto al campo donde se ha pegado el link: el aviso global sustituye la
+       pagina entera y te borraria de la pantalla lo que estabas escuchando. */
+    const reason = onSubmit(trimmed);
+    if (reason) {
+      setProblem(reason);
+      return;
+    }
+
     setValue('');
     setAdding(false);
     setOpen(false);
@@ -189,17 +205,39 @@ export default function PlaylistMenu({
   // Mismo contenido en los dos modos: solo cambia el envoltorio.
   const options = (
     <>
-      {entries.map((entry) => (
-        <button
-          key={entry.id}
-          type="button"
-          className={`menu__tab${entry.id === activeId ? ' menu__tab--on' : ''}`}
-          onClick={() => choose(entry)}
-          aria-current={entry.id === activeId ? 'true' : undefined}
-        >
-          {entry.label}
-        </button>
-      ))}
+      {entries.map((entry) => {
+        /* Las pegadas nacen sin nombre y lo reciben cuando contesta Spotify.
+           Mientras tanto hace falta algo que poner en la pestaña. */
+        const label = entry.label || 'Playlist';
+
+        return (
+          /* El aspa va HERMANA del boton, no dentro: un boton dentro de otro es
+             HTML invalido y el navegador desarma el marcado. De ahi el
+             envoltorio. */
+          <span className="menu__item" key={entry.id}>
+            <button
+              type="button"
+              className={`menu__tab${entry.id === activeId ? ' menu__tab--on' : ''}`}
+              onClick={() => choose(entry)}
+              aria-current={entry.id === activeId ? 'true' : undefined}
+            >
+              <span className="menu__label">{label}</span>
+              {entry.custom ? <span className="menu__own">tuya</span> : null}
+            </button>
+
+            {entry.custom ? (
+              <button
+                type="button"
+                className="menu__drop"
+                onClick={() => onRemove(entry.id)}
+                aria-label={`Quitar ${label}`}
+              >
+                &times;
+              </button>
+            ) : null}
+          </span>
+        );
+      })}
 
       {adding ? (
         <form className="menu__form" ref={formRef} onSubmit={handleSubmit}>
@@ -211,7 +249,10 @@ export default function PlaylistMenu({
             data-no-drag
             placeholder="https://open.spotify.com/playlist/..."
             aria-label="Link de la playlist"
-            onChange={(event) => setValue(event.target.value)}
+            onChange={(event) => {
+              setValue(event.target.value);
+              setProblem(null); // corregir el link no debe seguir con la queja puesta
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Escape') setAdding(false);
             }}
@@ -219,6 +260,11 @@ export default function PlaylistMenu({
           <button type="submit" className="menu__add" aria-label="Cargar playlist">
             &rarr;
           </button>
+          {problem ? (
+            <p className="menu__error" role="alert">
+              {problem}
+            </p>
+          ) : null}
         </form>
       ) : (
         <button
