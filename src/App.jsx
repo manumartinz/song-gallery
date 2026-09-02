@@ -838,6 +838,10 @@ export default function App() {
      respuesta desde siempre y hasta ahora no lo miraba nadie. */
   const hiddenCount = Math.max(0, (data?.totalCount ?? 0) - Math.min(tracks.length, trackLimit));
 
+  /* Con una busqueda puesta no se ofrece: lo que falta ahi son resultados del
+     filtro, y contarlos contra el total de la playlist confunde mas que ayuda. */
+  const moreCount = query ? 0 : hiddenCount;
+
   const viewProps = {
     items: visible,
     focusedIndex,
@@ -952,13 +956,15 @@ export default function App() {
 
               {visible.length === 0 ? (
                 <NoMatches query={query} onClear={() => setQuery('')} />
+              ) : view === 'grid' ? (
+                /* En la cuadricula la salida entra DENTRO de la reticula, como
+                   una casilla mas: una barra suelta bajo un mosaico no se lee
+                   como parte de el. */
+                <TrackGrid {...viewProps} moreCount={moreCount} moreUrl={data.externalUrl} />
               ) : (
                 <>
-                  {view === 'grid' ? <TrackGrid {...viewProps} /> : <TrackList {...viewProps} />}
-                  {/* Con una busqueda puesta no sale: lo que falta ahi es
-                      "resultados", y mezclarlo con el total de la playlist solo
-                      confunde. */}
-                  {query ? null : <MoreOnSpotify count={hiddenCount} url={data.externalUrl} />}
+                  <TrackList {...viewProps} />
+                  <MoreOnSpotify count={moreCount} url={data.externalUrl} />
                 </>
               )}
 

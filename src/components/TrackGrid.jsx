@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import Cover from './Cover.jsx';
 import EqBars from './EqBars.jsx';
+import MoreOnSpotify from './MoreOnSpotify.jsx';
 import usePlaybackPosition from '../hooks/usePlaybackPosition.js';
 
 /**
@@ -117,6 +118,8 @@ export default function TrackGrid({
   onSelect,
   onHover,
   onPointerDown,
+  moreCount = 0,
+  moreUrl = null,
 }) {
   return (
     <ul className="grid" onPointerDown={onPointerDown} onMouseLeave={() => onHover(null)}>
@@ -141,6 +144,17 @@ export default function TrackGrid({
           />
         );
       })}
+
+      {/* Cierra la reticula como una casilla mas. `slot` sigue la cuenta de las
+          demas para que herede el escalonado de entrada en vez de aparecer de
+          golpe cuando las otras aun estan entrando. */}
+      <MoreOnSpotify
+        variant="grid"
+        count={moreCount}
+        url={moreUrl}
+        slot={items.length}
+        onHover={onHover}
+      />
     </ul>
   );
 }

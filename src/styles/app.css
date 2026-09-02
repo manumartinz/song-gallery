@@ -1627,6 +1627,68 @@ body.is-dragging-body * {
   color: var(--text-faint);
 }
 
+/* La misma salida como ultima casilla del mosaico. Hereda la caja de `.cell`
+   —cuadrada, con su escalonado de entrada— para encajar en la reticula, pero se
+   dibuja al reves que las demas: sin portada, apagada y con el borde marcado.
+   Es una puerta, no una cancion, y disfrazarla de cancion invitaria a pulsarla
+   esperando que suene algo. */
+.cell--more {
+  background: rgba(244, 241, 234, 0.03);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.more-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+
+.more-cell:hover {
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.05);
+}
+
+.more-cell svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.more-cell:hover svg {
+  transform: translate(2px, -2px);
+}
+
+.more-cell__count {
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+/* La celda mas estrecha son 88 px: a este tamaño no cabe mas texto que esto. */
+.more-cell__label {
+  font-size: 0.55rem;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 /* ---------- Hint flotante ---------- */
 
 .hint {
