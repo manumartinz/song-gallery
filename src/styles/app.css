@@ -232,6 +232,9 @@ body.is-dragging-body * {
 /* ---------- Menu de playlists ---------- */
 
 .menu {
+  /* Ancla del aviso de primera visita. En movil `.menu--compact` ya lo pone
+     para el desplegable; aqui hace falta tambien en escritorio. */
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--gap-sm);
@@ -320,6 +323,72 @@ body.is-dragging-body * {
 .menu__input:focus {
   outline: none;
   border-color: var(--line-strong);
+}
+
+/* Globo que señala el menu en la primera visita.
+   Va fuera de flujo a proposito: `.menu` envuelve, y un hijo mas en flujo
+   mandaria las pestañas a una segunda linea. */
+.menu__hint {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 4; /* sobre la barra (3), por debajo del mini (5) */
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.36rem 0.4rem 0.36rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  /* Opaco: cuelga sobre la lista, que se desplaza por debajo. */
+  background: rgba(12, 12, 16, 0.98);
+  font-size: 0.66rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  animation: hint-drop var(--dur-slow) var(--ease-out) backwards 350ms;
+}
+
+/* La punta: un cuadrado girado 45 grados al que solo se le dejan las dos caras
+   que asoman por encima del globo. Se coloca bajo la ULTIMA pestaña y no en el
+   borde, que ahi esta el "+" y señalarlo diria otra cosa: que hay que añadir
+   una playlist, cuando lo que se quiere contar es que ya hay varias. */
+.menu__hint::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: 2.6rem;
+  width: 7px;
+  height: 7px;
+  background: rgba(12, 12, 16, 0.98);
+  border-top: 1px solid var(--line-strong);
+  border-left: 1px solid var(--line-strong);
+  transform: rotate(45deg);
+}
+
+.menu__hint-close {
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  border-radius: 50%;
+  font-size: 0.82rem;
+  line-height: 1;
+  color: var(--text-faint);
+  transition: color var(--dur-fast), background-color var(--dur-fast);
+}
+
+.menu__hint-close:hover {
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.08);
+}
+
+@keyframes hint-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
 /* ---------- Conmutador de vista ---------- */
@@ -1743,6 +1812,11 @@ body.is-dragging-body * {
     flex: 1;
     width: auto;
     min-width: 0;
+  }
+
+  /* Aqui el menu entero es un boton, asi que la punta va bajo su flecha. */
+  .menu__hint::before {
+    right: 1.1rem;
   }
 
   .row {

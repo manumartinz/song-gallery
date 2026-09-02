@@ -747,6 +747,9 @@ export default function App() {
               adding={adding}
               setAdding={setAdding}
               onSubmit={handleAddPlaylist}
+              /* Solo con la playlist ya en pantalla y el splash fuera: durante
+                 el saludo no se ve la barra, y el aviso se gastaria a solas. */
+              hint={Boolean(data) && !showSplash}
             />
             {data ? <ViewToggle view={view} onChange={setView} /> : null}
           </div>
