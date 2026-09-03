@@ -517,6 +517,105 @@ body.is-dragging-body * {
   background: var(--bone);
 }
 
+/* ---------- Volumen ---------- */
+
+.vol {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+}
+
+.vol__btn {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  color: var(--text-faint);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+
+.vol__btn svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vol:hover .vol__btn,
+.vol__btn:focus-visible {
+  color: var(--text-muted);
+}
+
+.vol__range {
+  --level: 1;
+  width: 4.25rem;
+  height: 1.1rem;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* El relleno va en la pista y se pinta con un degradado de dos paradas duras:
+   un pseudo-elemento propio no se puede porque el input es un elemento
+   reemplazado y no admite ::before. */
+.vol__range::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0 calc(var(--level) * 100%),
+    var(--line-strong) calc(var(--level) * 100%) 100%
+  );
+}
+
+.vol__range::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) 0 calc(var(--level) * 100%),
+    var(--line-strong) calc(var(--level) * 100%) 100%
+  );
+}
+
+.vol__range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 9px;
+  height: 9px;
+  margin-top: -3px; /* centra el tirador sobre una pista de 3px */
+  border-radius: 50%;
+  background: var(--bone);
+}
+
+.vol__range::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--bone);
+}
+
+.vol__range:focus-visible {
+  outline: none;
+}
+
+.vol__range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.vol__range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 /* ---------- Cabecera de la playlist ---------- */
 
 .intro {
@@ -1942,6 +2041,12 @@ body.is-dragging-body * {
     gap: var(--gap-sm);
   }
 
+  /* La barra comparte fila con el boton del menu, que lleva el nombre de la
+     playlist: algo mas corta para no comerselo entero. */
+  .vol__range {
+    width: 3.4rem;
+  }
+
   /* El desplegable se ancla a la derecha de la barra. */
   .menu--compact {
     position: relative;
@@ -2113,6 +2218,25 @@ body.is-dragging-body * {
      solo aparece con el hover, que aqui no llega nunca. */
   .menu__drop {
     opacity: 1;
+  }
+
+  /* Sin hover que lo despierte, el icono del volumen se queda a la vista, y el
+     tirador crece a lo que un dedo puede agarrar. */
+  .vol__btn {
+    width: 2rem;
+    height: 2rem;
+    color: var(--text-muted);
+  }
+
+  .vol__range::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    margin-top: -4.5px;
+  }
+
+  .vol__range::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
   }
 
   .row--focused {

@@ -9,6 +9,7 @@ import TrackList from './components/TrackList.jsx';
 import MoreOnSpotify from './components/MoreOnSpotify.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
+import VolumeControl from './components/VolumeControl.jsx';
 import { EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
 import { PLAYLISTS } from './config/playlists.js';
 import {
@@ -125,6 +126,11 @@ const DEFAULT_SORTS = new Map(
     .filter((entry) => entry.sort && SORTS[entry.sort])
     .map((entry) => [entry.id, entry.sort]),
 );
+
+/** Una tecla sola, sin modificadores: los atajos del navegador van por delante. */
+function bare(event) {
+  return !event.metaKey && !event.ctrlKey && !event.altKey;
+}
 
 function readCustomEntries() {
   try {
@@ -359,6 +365,7 @@ export default function App() {
   playRef.current = player.play;
 
   const { play, toggle, seek, stop, preload, getPosition } = player;
+  const { setVolume, nudgeVolume, toggleMute } = player;
 
   /* Calienta la cache con el tema siguiente para que el avance automatico
      entre sin hueco. Va por un elemento aparte, no por los decks. */
@@ -752,6 +759,23 @@ export default function App() {
         case 'ArrowLeft':
           if (player.trackId) seek(getPosition() - 5);
           break;
+        /* Volumen con las teclas de siempre. Las flechas arriba y abajo ya son
+           del cursor de la lista, asi que aqui van los signos. Con modificador
+           no: Cmd+M minimiza la ventana y Ctrl+- es el zoom del navegador, y
+           robarles el gesto seria silenciar la pagina sin querer. */
+        case '+':
+        case '=':
+          if (!bare(event)) break;
+          nudgeVolume(0.1);
+          break;
+        case '-':
+          if (!bare(event)) break;
+          nudgeVolume(-0.1);
+          break;
+        case 'm':
+          if (!bare(event)) break;
+          toggleMute();
+          break;
         default:
           break;
       }
@@ -762,7 +786,18 @@ export default function App() {
     /* La posicion se lee al vuelo con getPosition() y NO esta en las
        dependencias: tenerla ahi volvia a registrar este listener global veinte
        veces por segundo mientras sonaba algo. */
-  }, [focusedIndex, visible, scrollTo, handleSelect, toggle, seek, getPosition, player.trackId]);
+  }, [
+    focusedIndex,
+    visible,
+    scrollTo,
+    handleSelect,
+    toggle,
+    seek,
+    getPosition,
+    nudgeVolume,
+    toggleMute,
+    player.trackId,
+  ]);
 
   /**
    * Devuelve el motivo del rechazo, o null si la playlist entro.
@@ -905,7 +940,17 @@ export default function App() {
                  el saludo no se ve la barra, y el aviso se gastaria a solas. */
               hint={Boolean(data) && !showSplash}
             />
-            {data ? <ViewToggle view={view} onChange={setView} /> : null}
+            {data ? (
+              <>
+                <VolumeControl
+                  volume={player.volume}
+                  muted={player.muted}
+                  onVolume={setVolume}
+                  onToggleMute={toggleMute}
+                />
+                <ViewToggle view={view} onChange={setView} />
+              </>
+            ) : null}
           </div>
         </header>
 

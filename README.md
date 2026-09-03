@@ -14,6 +14,13 @@ Deezer, con iTunes de reserva.
 La lista aparece en cuanto responde Spotify; los previews van llegando después
 por tramos, para no esperar a doscientas resoluciones antes de pintar nada.
 
+El volumen vive en la barra de arriba y se recuerda en el navegador. Abre a un
+sexto y va por debajo del techo del reproductor: los previews llegan
+normalizados muy arriba, así que el 100% del mando no es el 100% del audio. Con
+teclado, `+` y `-` mueven y `m` silencia. En Safari de iOS `volume` es de sólo
+lectura, así que allí el nivel viaja por una ganancia de Web Audio —el mismo
+grafo del ecualizador—, que de paso le devuelve el crossfade.
+
 El fondo difuminado se calcula en un canvas a partir de la portada. Está hecho a
 mano en JavaScript (`src/lib/blurArt.js`) porque `filter: blur()` en CSS se
 rasteriza a la escala final y hundía los fotogramas al reproducir.

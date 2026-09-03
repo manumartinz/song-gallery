@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { disableGraph, isGraphEnabled, resumeGraph, routeDeck } from '../lib/analyser.js';
+import {
+  disableGraph,
+  getDeckLevel,
+  isGraphEnabled,
+  resumeGraph,
+  routeDeck,
+  setDeckLevel,
+} from '../lib/analyser.js';
 
 /**
  * Reproductor de dos pistas con crossfade.
  *
  * Usa dos elementos <audio> que se alternan: mientras uno suena, el otro carga
- * el tema siguiente; al cambiar se cruzan las ganancias. El fundido se hace
- * rampando `volume` y no con ganancias de Web Audio, para que la reproduccion
- * no dependa del grafo: si el analizador no esta disponible, el audio sigue
- * funcionando igual.
+ * el tema siguiente; al cambiar se cruzan sus niveles.
+ *
+ * El nivel de un deck se escribe por uno de dos caminos, nunca por los dos:
+ * `volume` del elemento mientras esta suelto, y su ganancia de Web Audio en
+ * cuanto entra en el grafo (ver `setLevel`). Asi el audio no depende del grafo
+ * —sin analizador se sigue oyendo y fundiendo por el elemento— y a la vez el
+ * mando de volumen y el fundido funcionan en Safari de iOS, donde `volume` es
+ * de solo lectura.
  *
  * INVARIANTE que sostiene todo lo demas: como mucho un deck es audible, y es
  * el de la ultima pista pedida. Si el motor dice que no suena nada, no se oye
@@ -32,13 +43,64 @@ const CROSSFADE_MS = 420;
 const POSITION_HZ = 20; // suficiente para una barra fluida sin re-render de mas
 
 /* Techo de volumen. Los previews de Deezer e iTunes vienen normalizados muy
-   arriba y a todo trapo asustan a quien entra con los cascos puestos. No hay
-   control en pantalla a proposito: `volume` es de solo lectura en Safari de
-   iOS, asi que un mando visible estaria muerto justo donde mas molesta el
-   susto. Aqui el techo se ignora en silencio y el resto de navegadores lo
-   respetan. Es tambien el destino del fundido: la rampa apunta a este valor,
-   no a 1. */
+   arriba y a todo trapo asustan a quien entra con los cascos puestos, asi que
+   el mando de la barra reparte de aqui hacia abajo: al 100% se oye este 0.75,
+   no un 1. Es tambien el destino del fundido: la rampa apunta al nivel
+   efectivo, nunca a 1. */
 const MAX_VOLUME = 0.75;
+
+const VOLUME_KEY = 'song-gallery:volume';
+
+/* Con lo que se abre quien llega por primera vez: un sexto del mando. Sobre el
+   techo son ~0.13 de volumen real, que es a lo que se puede recibir a alguien
+   con los cascos puestos sin pedirle perdon. Subir es un gesto; bajar de un
+   susto, un manotazo. */
+const DEFAULT_VOLUME = 0.17;
+
+/** A 0..1, con dos decimales: los escalones del teclado no arrastran colas. */
+function clampVolume(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.min(1, Math.max(0, Math.round(number * 100) / 100));
+}
+
+/** Volumen guardado, 0..1, o el de partida si no hay nada guardado. */
+function readStoredVolume() {
+  try {
+    const raw = localStorage.getItem(VOLUME_KEY);
+    if (raw === null || !Number.isFinite(Number(raw))) return DEFAULT_VOLUME;
+    return clampVolume(raw);
+  } catch {
+    return DEFAULT_VOLUME;
+  }
+}
+
+function persistVolume(value) {
+  try {
+    localStorage.setItem(VOLUME_KEY, String(value));
+  } catch {
+    /* sin persistencia, sigue funcionando en esta sesion */
+  }
+}
+
+/**
+ * Pone el nivel de un deck por el camino que corresponda.
+ *
+ * Un deck enrutado atenua con su ganancia de Web Audio y uno suelto con
+ * `volume` del elemento, y NUNCA con los dos: escribir en ambos multiplicaria
+ * las dos atenuaciones. `setDeckLevel` dice cual de los dos es. El camino por
+ * el elemento es ademas el que Safari de iOS ignora en silencio, y por eso
+ * alli el fundido y el techo solo existen desde que el deck esta en el grafo.
+ */
+function setLevel(deck, level) {
+  if (!setDeckLevel(deck, level)) deck.volume = level;
+}
+
+/** El nivel actual, leido del mismo camino por el que se escribe. */
+function getLevel(deck) {
+  const routed = getDeckLevel(deck);
+  return routed === null ? deck.volume : routed;
+}
 
 /* `position` NO esta aqui a proposito: se refresca 20 veces por segundo y en el
    estado obligaba a re-renderizar todo el arbol a esa frecuencia. Viaja por
@@ -70,7 +132,7 @@ function releaseDeck(deck) {
   deck.pause();
   deck.removeAttribute('src');
   deck.load();
-  deck.volume = 0;
+  setLevel(deck, 0);
 }
 
 export default function usePlayer({ onEnded, crossfade = true } = {}) {
@@ -97,6 +159,17 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
   const [status, setStatus] = useState(IDLE);
   const statusRef = useRef(status);
   statusRef.current = status;
+
+  const [volume, setVolumeState] = useState(readStoredVolume);
+  const [muted, setMuted] = useState(false);
+
+  /* Nivel al que suena un deck que este del todo dentro: el techo repartido por
+     el mando. Vive en una ref ademas del estado porque lo leen los frames del
+     fundido, que corren fuera de React; si leyeran el estado, cada fundido se
+     quedaria con el volumen que hubiera al empezarlo y mover la barra a media
+     cancion no se oiria hasta la siguiente. */
+  const ceilingRef = useRef(0);
+  ceilingRef.current = muted ? 0 : MAX_VOLUME * volume;
 
   /* Canal aparte para la posicion, fuera del estado de React. Quien la muestre
      se suscribe y se repinta solo el; los demas ni se enteran. */
@@ -129,7 +202,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     engine.fade = null;
 
     const to = engine.decks[fade.toIndex];
-    if (to) to.volume = MAX_VOLUME;
+    if (to) setLevel(to, ceilingRef.current);
 
     // Solo se libera el saliente si nadie lo ha reclamado desde entonces.
     if (fade.fromIndex !== -1 && fade.fromIndex !== fade.toIndex) {
@@ -146,7 +219,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
       const from = fromIndex === -1 ? null : engine.decks[fromIndex];
       const to = engine.decks[toIndex];
       const fromOwner = fromIndex === -1 ? -1 : engine.owner[fromIndex];
-      const fromVolume = from ? from.volume : 0;
+      const fromLevel = from ? getLevel(from) : 0;
 
       /* El origen del tiempo se toma del primer frame, no de performance.now():
          mezclar ambos relojes asume que comparten origen, y si no lo hacen el
@@ -157,8 +230,8 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
         if (start === null) start = now;
         const progress = fadeMs <= 0 ? 1 : Math.min(1, (now - start) / fadeMs);
 
-        if (from && from !== to) from.volume = Math.max(0, fromVolume * (1 - progress));
-        to.volume = MAX_VOLUME * progress;
+        if (from && from !== to) setLevel(from, Math.max(0, fromLevel * (1 - progress)));
+        setLevel(to, ceilingRef.current * progress);
 
         if (progress < 1) {
           engine.fade.raf = requestAnimationFrame(step);
@@ -224,7 +297,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
          visualizador sigue activo; si resultara que la fuente no admite CORS,
          se reintenta sin el en vez de dar el tema por roto. */
       const attempt = (withCors) => {
-        deck.volume = 0;
+        setLevel(deck, 0);
         deck.crossOrigin = withCors ? 'anonymous' : null;
         deck.src = track.previewUrl; // aborta cualquier play() pendiente aqui
         deck.currentTime = 0;
@@ -323,6 +396,48 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     warm.load();
   }, []);
 
+  /**
+   * Volumen del visitante, 0..1. Se reparte sobre el techo y no sobre el 1: el
+   * maximo del mando es `MAX_VOLUME`.
+   */
+  const setVolume = useCallback((value) => {
+    setVolumeState(clampVolume(value));
+    if (Number(value) > 0) setMuted(false); // tocar la barra es querer oir algo
+  }, []);
+
+  /** Un escalon arriba o abajo. Funcional: los atajos no dependen del valor. */
+  const nudgeVolume = useCallback((delta) => {
+    setVolumeState((current) => clampVolume(current + delta));
+    if (delta > 0) setMuted(false);
+  }, []);
+
+  const toggleMute = useCallback(() => setMuted((m) => !m), []);
+
+  /* Se guarda aqui y no dentro de los updaters: React puede invocarlos dos
+     veces, y escribir en el almacenamiento desde ahi es pedir sorpresas. El
+     silencio no se guarda a proposito: abrir la pagina muda seria un fallo.
+
+     El primer pase no escribe. Si escribiera, a quien solo abre la web se le
+     quedaria grabado el valor de partida, y a partir de ahi el de la casa ya no
+     le llegaria nunca: solo se guarda lo que alguien ha decidido. */
+  const volumeTouched = useRef(false);
+  useEffect(() => {
+    if (!volumeTouched.current) {
+      volumeTouched.current = true;
+      return;
+    }
+    persistVolume(volume);
+  }, [volume]);
+
+  /* Lleva el nivel nuevo al deck que suena. Durante un fundido no se toca: sus
+     frames ya leen `ceilingRef` y escribir aqui pisaria la rampa a medias. */
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (engine.fade || engine.active === -1) return;
+    const deck = engine.decks[engine.active];
+    if (deck.src) setLevel(deck, ceilingRef.current);
+  }, [volume, muted]);
+
   const stop = useCallback(() => {
     const engine = engineRef.current;
     engine.seq += 1; // invalida cualquier carga en vuelo
@@ -399,5 +514,19 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     };
   }, []);
 
-  return { ...status, play, toggle, seek, stop, preload, subscribePosition, getPosition };
+  return {
+    ...status,
+    volume,
+    muted,
+    play,
+    toggle,
+    seek,
+    stop,
+    preload,
+    setVolume,
+    nudgeVolume,
+    toggleMute,
+    subscribePosition,
+    getPosition,
+  };
 }
