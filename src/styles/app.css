@@ -229,6 +229,177 @@ body.is-dragging-body * {
   min-width: 0;
 }
 
+/* ---------- Albumes: rotulos sueltos ---------- */
+
+/* Por debajo de 1320 px van en el flujo, como una tira encima de las canciones.
+   El corte no es redondo por gusto: la lista mide 1000 px y se centra, asi que
+   hasta ese ancho no queda margen libre suficiente a la izquierda y los rotulos
+   caerian encima de las propias canciones. */
+.rail {
+  /* Ancla del aviso de primera visita, que cuelga de aqui en las dos caras. */
+  position: relative;
+  padding: var(--gap-sm) var(--shell-x) 0;
+}
+
+.rail__eyebrow {
+  margin: 0 0 var(--gap-sm);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.rail__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-xs) var(--gap-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Mismo tono que las pestañas de arriba: al final son lo mismo, un rotulo que
+   lleva a otra cosa. */
+.rail__item {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--dur-hover) var(--ease-out);
+}
+
+.rail__item:hover,
+.rail__item:focus-visible {
+  color: var(--text);
+}
+
+.rail__item--on {
+  color: var(--accent);
+}
+
+/* Aviso de primera visita. Mismo globo que el del menu de playlists —opaco,
+   redondo y con su punta—, pero colgando de los rotulos. En la tira del flujo
+   cae debajo, con la punta hacia arriba. */
+.rail__hint {
+  position: absolute;
+  top: calc(100% + 0.2rem);
+  left: var(--shell-x);
+  z-index: 4; /* sobre la barra (3), por debajo del mini (5) */
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.36rem 0.4rem 0.36rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  /* Opaco: cuelga sobre la lista, que se desplaza por debajo. */
+  background: rgba(12, 12, 16, 0.98);
+  font-size: 0.66rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  animation: hint-drop var(--dur-slow) var(--ease-out) backwards 350ms;
+}
+
+.rail__hint::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 1.6rem;
+  width: 7px;
+  height: 7px;
+  background: rgba(12, 12, 16, 0.98);
+  border-top: 1px solid var(--line-strong);
+  border-left: 1px solid var(--line-strong);
+  transform: rotate(45deg);
+}
+
+.rail__hint-close {
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: none;
+  border-radius: 50%;
+  font-size: 0.82rem;
+  line-height: 1;
+  color: var(--text-faint);
+  transition: color var(--dur-fast), background-color var(--dur-fast);
+}
+
+.rail__hint-close:hover {
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.08);
+}
+
+@media (min-width: 1320px) {
+  /* Sueltos sobre el fondo, a media altura y contra el margen izquierdo. No
+     empujan nada: el contenido sigue centrado en toda la pagina, igual que
+     antes de que existieran los albumes. */
+  .rail {
+    position: fixed;
+    left: var(--shell-x);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: var(--rail-gutter);
+    padding: 0;
+    /* Flotan POR ENCIMA de la pagina: sin esto su caja se traga los clicks de
+       la franja que cubre, donde debajo sigue habiendo lista. */
+    pointer-events: none;
+  }
+
+  .rail__list {
+    display: grid;
+    gap: var(--gap-sm);
+  }
+
+  .rail__item {
+    pointer-events: auto;
+    justify-self: start;
+    text-align: left;
+    /* Un titulo largo parte de linea dentro de su franja en vez de crecer hacia
+       las canciones. */
+    max-width: 100%;
+  }
+
+  /* Flotando, el globo no cabe debajo —la columna ya esta centrada a lo alto—,
+     asi que sale AL LADO, con la punta mirando a los rotulos. */
+  .rail__hint {
+    pointer-events: auto;
+    top: 50%;
+    left: calc(100% + 0.7rem);
+    transform: translateY(-50%);
+    animation-name: hint-slide;
+  }
+
+  .rail__hint::before {
+    top: 50%;
+    left: -4px;
+    margin-top: -3.5px;
+    border-top: 0;
+    border-left: 1px solid var(--line-strong);
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  /* La lista se centra y le sobra margen, pero la cuadricula llega hasta el
+     borde: solo a ella se le aparta la franja de los rotulos.
+
+     Va con `.shell` delante para ganar en especificidad: la regla base de
+     `.grid` esta mas abajo en la hoja y su `padding` en atajo borraria este. */
+  .shell .grid {
+    padding-left: calc(var(--shell-x) + var(--rail-gutter) + var(--gap-md));
+  }
+}
+
 /* ---------- Menu de playlists ---------- */
 
 .menu {
@@ -481,6 +652,16 @@ body.is-dragging-body * {
   }
 }
 
+/* El mismo gesto para el globo que sale al lado, entrando desde la izquierda.
+   Hace falta uno propio porque ese va centrado con `translateY(-50%)` y una
+   animacion que toque `transform` sin conservarlo lo descolocaria medio alto. */
+@keyframes hint-slide {
+  from {
+    opacity: 0;
+    transform: translate(-6px, -50%);
+  }
+}
+
 /* ---------- Conmutador de vista ---------- */
 
 .views {
@@ -623,6 +804,43 @@ body.is-dragging-body * {
   max-width: var(--list-max);
   margin-inline: auto;
 }
+
+/* Cabecera con portada: solo la de un album. La imagen a la izquierda y el
+   texto al lado, alineado abajo, que es como se lee la contraportada de un
+   disco. Sin portada el bloque se queda como estaba, sin envoltorios de mas. */
+.intro--art {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(var(--gap-md), 3vw, var(--gap-lg));
+}
+
+.intro__art {
+  width: clamp(6.5rem, 16vw, 12.5rem);
+  flex: none;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(244, 241, 234, 0.06);
+  /* La portada cae sobre el fondo difuminado, que es ella misma ampliada: sin
+     un borde y algo de sombra se funde con el y pierde el canto. */
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 1.5rem 3rem rgba(7, 7, 10, 0.55);
+}
+
+.intro__art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* `min-width: 0` para que un titulo largo se reparta en varias lineas en vez de
+   empujar la portada fuera de la pagina. */
+.intro__text {
+  min-width: 0;
+}
+
 
 .intro__eyebrow {
   font-size: 0.62rem;
@@ -1018,6 +1236,41 @@ body.is-dragging-body * {
   color: var(--text-faint);
   align-self: start;
   padding-top: 0.35rem;
+}
+
+/* ---------- Fila en modo album ---------- */
+
+/* Sin portada: en un disco las catorce filas repiten la misma caratula, que ya
+   esta en la columna de la izquierda y en el fondo de la pagina. Se queda en
+   tres columnas (numero, texto, duracion) y el glifo se muda al numero. */
+.row--album {
+  grid-template-columns: auto 1fr auto;
+}
+
+.row--album .row__index {
+  position: relative;
+  align-self: center;
+  padding-top: 0;
+  min-width: 1.6rem;
+}
+
+.row--album .row__num {
+  transition: opacity var(--dur-hover) var(--ease-out);
+}
+
+/* Al enfocar o sonar, el numero deja su sitio al triangulo. */
+.row--album.row--focused .row__num,
+.row--album.row--current .row__num {
+  opacity: 0;
+}
+
+.row--album .row__play {
+  background: none;
+}
+
+.row--album .row__play svg {
+  width: 0.8rem;
+  height: 0.8rem;
 }
 
 .row__time {
@@ -2009,6 +2262,17 @@ body.is-dragging-body * {
     row-gap: var(--gap-sm);
   }
 
+  /* La portada del album se pone encima del texto: a lo ancho de un telefono,
+     ponerla al lado deja el titulo en una columna de nada. */
+  .intro--art {
+    display: block;
+  }
+
+  .intro__art {
+    width: clamp(7rem, 38vw, 11rem);
+    margin-bottom: var(--gap-md);
+  }
+
   /* En movil el titulo pegajoso SUSTITUYE a la marca: comparten celda.
      Antes la marca se tapaba con un rectangulo opaco pintado encima, y eso solo
      funciona mientras el titulo sea mas largo que ella; con nombres de playlist
@@ -2201,6 +2465,15 @@ body.is-dragging-body * {
   .row__index,
   .row__time {
     display: none;
+  }
+
+  /* Salvo en un album. Ahi la fila ya no lleva portada, asi que el numero es lo
+     unico que queda a su izquierda, y encima es donde vive el triangulo de
+     reproduccion: sin el, en movil no habria nada que dijera que la fila suena
+     al tocarla. */
+  .row--album .row__index {
+    display: grid;
+    place-items: center;
   }
 
   .row__reveal {

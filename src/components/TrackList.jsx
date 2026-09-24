@@ -8,6 +8,7 @@ import TrackRow from './TrackRow.jsx';
  */
 export default function TrackList({
   items,
+  album,
   focusedIndex,
   playingIndex,
   selectedIndex,
@@ -32,6 +33,7 @@ export default function TrackList({
             track={track}
             index={index}
             slot={slot}
+            album={album}
             isFocused={index === focusedIndex}
             isCurrent={isCurrent}
             isOpen={index === selectedIndex}

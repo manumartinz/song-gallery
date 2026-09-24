@@ -16,11 +16,17 @@ import { capitalize, formatDuration, formatFollowers, formatReleaseDate } from '
  * La barra de progreso ya no vive aqui sino en el mini-reproductor: tenerla
  * atada al hover hacia que cada fila por la que pasabas pareciese estar
  * avanzando, porque todas leian la posicion global del reproductor.
+ *
+ * `album` cambia la fila de forma cuando la fuente es un disco: la portada se
+ * retira, porque repetir la misma caratula catorce veces no informa de nada, y
+ * el glifo de reproduccion se muda encima del numero de pista, que es donde lo
+ * busca la mano en cualquier lista de un album.
  */
 function TrackRow({
   track,
   index,
   slot,
+  album,
   isFocused,
   isCurrent,
   isOpen,
@@ -41,8 +47,16 @@ function TrackRow({
   const releaseLabel = formatReleaseDate(track.releaseDate);
   const followers = formatFollowers(track.followers);
 
+  const glyph =
+    playable || pending ? (
+      <span className="row__play">
+        <PlayGlyph playing={isCurrent && isPlaying} />
+      </span>
+    ) : null;
+
   const className = [
     'row',
+    album ? 'row--album' : '',
     isCurrent ? 'row--current' : '', // esta sonando
     isOpen ? 'row--open' : '', // tiene la ficha desplegada
     isFocused ? 'row--focused' : '',
@@ -81,18 +95,21 @@ function TrackRow({
       />
 
       {/* Numeracion por posicion visible: al ordenar o filtrar, la lista debe
-          leerse 01, 02, 03 y no saltar con los indices originales. */}
-      <span className="row__index">{String(slot + 1).padStart(2, '0')}</span>
+          leerse 01, 02, 03 y no saltar con los indices originales. En un album
+          y sin tocar el orden coincide con el numero de pista del disco. */}
+      <span className="row__index">
+        <span className="row__num">{String(slot + 1).padStart(2, '0')}</span>
+        {/* Sin portada donde ponerlo, el glifo se pinta aqui encima. */}
+        {album ? glyph : null}
+      </span>
 
-      <div className="row__art">
-        {/* La fila colapsada mide ~48-64 px y la abierta llega a ~112. */}
-        <Cover art={track.art} sizes="(max-width: 720px) 64px, 112px" />
-        {playable || pending ? (
-          <span className="row__play">
-            <PlayGlyph playing={isCurrent && isPlaying} />
-          </span>
-        ) : null}
-      </div>
+      {album ? null : (
+        <div className="row__art">
+          {/* La fila colapsada mide ~48-64 px y la abierta llega a ~112. */}
+          <Cover art={track.art} sizes="(max-width: 720px) 64px, 112px" />
+          {glyph}
+        </div>
+      )}
 
       <div className="row__main">
         <h2 className="row__title">{track.title}</h2>
@@ -107,7 +124,9 @@ function TrackRow({
       <div className="row__reveal">
         <div>
           <div className="row__details">
-            {track.album ? (
+            {/* En un album, decir el album en cada ficha es decir lo que ya
+                pone el titulo de la pagina catorce veces. */}
+            {track.album && !album ? (
               <span className="tag">
                 <span className="tag--key">Álbum</span>
                 {track.albumUrl ? (

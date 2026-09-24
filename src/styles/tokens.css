@@ -43,6 +43,9 @@
   --row-art-active: clamp(4.75rem, 9vw, 7rem);
   --list-max: 1000px;
   --grid-max: 1500px;
+  /* Franja donde flotan los rotulos de los albumes. Los acota a lo ancho y es
+     lo que la cuadricula se aparta para no pintar por debajo. */
+  --rail-gutter: 9rem;
 }
 
 /* Sin animaciones para quien las tenga desactivadas en el sistema. */

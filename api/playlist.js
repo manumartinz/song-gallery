@@ -9,6 +9,7 @@
  * antes de ver una sola fila.
  */
 import { parsePlaylistId, spotifyGet, SpotifyError } from './_spotify.js';
+import { pickArt, yearOf, fetchArtistDetails } from './_normalize.js';
 import { rateLimited } from './_ratelimit.js';
 
 const MAX_TRACKS = 200; // tope para que la funcion no se eternice en playlists enormes
@@ -22,30 +23,6 @@ const TRACK_FIELDS =
   'album(name,release_date,total_tracks,images,external_urls(spotify)),' +
   'artists(id,name,external_urls(spotify))))';
 
-/**
- * Spotify ordena las imagenes de mayor a menor: 640 / 300 / 64 px.
- *
- * La intermedia de 300 es la que de verdad necesitan la cuadricula y las filas.
- * Antes se descartaba y ambas vistas cargaban la de 640 para celdas de ~100 px.
- */
-function pickArt(images) {
-  const list = Array.isArray(images) ? images.filter(Boolean) : [];
-  if (!list.length) return { lg: null, md: null, sm: null };
-
-  const lg = list[0].url;
-  const sm = list[list.length - 1].url;
-  // Algunos albumes traen menos de tres tamaños: se cae hacia el grande.
-  const md = list.length > 2 ? list[1].url : lg;
-
-  return { lg, md, sm };
-}
-
-/** "2019-04-05" -> 2019. Spotify tambien devuelve solo el año en discos antiguos. */
-function yearOf(releaseDate) {
-  const year = Number(String(releaseDate || '').slice(0, 4));
-  return Number.isFinite(year) && year > 0 ? year : null;
-}
-
 async function fetchAllItems(playlistId) {
   const items = [];
   let url = `/playlists/${playlistId}/tracks?limit=100&fields=${encodeURIComponent(TRACK_FIELDS)}`;
@@ -57,26 +34,6 @@ async function fetchAllItems(playlistId) {
   }
 
   return items.slice(0, MAX_TRACKS);
-}
-
-/** Un solo GET /artists por cada 50 artistas: generos y seguidores del artista principal. */
-async function fetchArtistDetails(artistIds) {
-  const details = new Map();
-  const unique = [...new Set(artistIds.filter(Boolean))];
-
-  for (let i = 0; i < unique.length; i += 50) {
-    const chunk = unique.slice(i, i + 50);
-    const data = await spotifyGet(`/artists?ids=${chunk.join(',')}`);
-    for (const artist of data.artists || []) {
-      if (!artist) continue;
-      details.set(artist.id, {
-        genre: artist.genres?.[0] || null,
-        followers: artist.followers?.total ?? null,
-      });
-    }
-  }
-
-  return details;
 }
 
 export default async function handler(req, res) {
@@ -145,6 +102,10 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
 
     return res.status(200).json({
+      /* Lo dice el servidor y no lo infiere el cliente: es el mismo campo con el
+         que /api/album se distingue de esto, y quien pinta la cabecera no tiene
+         por que deducirlo de la forma del payload. */
+      kind: 'playlist',
       id: playlist.id,
       name: playlist.name,
       description: (playlist.description || '').replace(/<[^>]*>/g, ''),

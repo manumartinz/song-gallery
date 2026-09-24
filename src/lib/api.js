@@ -1,23 +1,41 @@
 /**
- * Cliente de /api/playlist con cache en localStorage.
+ * Cliente de /api/playlist y /api/album con cache en localStorage.
  *
  * La funcion serverless ya cachea en el edge de Vercel; esta capa evita
- * ademas el viaje de red en recargas y al ir y volver entre playlists.
+ * ademas el viaje de red en recargas y al ir y volver entre fuentes.
+ *
+ * Una "fuente" es siempre `{ kind, id }`, con kind 'playlist' o 'album'. Los
+ * dos tipos de id son indistinguibles a simple vista (22 caracteres en base62),
+ * asi que el tipo viaja al lado y nunca se adivina.
  */
 
 const TTL_MS = 60 * 60 * 1000; // 1 h
 /* La version va en la clave: al cambiar la forma de la respuesta (por ejemplo
    al añadir el tamaño intermedio de portada) hay que subirla, o quien vuelva
-   con caché de una hora recibiria datos con la forma vieja. */
-const PREFIX = 'song-gallery:playlist:v2:';
+   con caché de una hora recibiria datos con la forma vieja.
 
-function readCache(key) {
+   Los albumes estrenan su propio prefijo en vez de compartir el de playlists:
+   asi nadie que ya tenga playlists guardadas pierde su caché por un cambio que
+   no le afecta. */
+const PREFIXES = {
+  playlist: 'song-gallery:playlist:v2:',
+  /* v2: se añadió `art` a la respuesta del álbum para la portada de la
+     cabecera. Sin subirla, quien tuviera un álbum cacheado de la hora anterior
+     lo abriría sin portada hasta que caducase. */
+  album: 'song-gallery:album:v2:',
+};
+
+function prefixFor(kind) {
+  return PREFIXES[kind] || PREFIXES.playlist;
+}
+
+function readCache(kind, key) {
   try {
-    const raw = localStorage.getItem(PREFIX + key);
+    const raw = localStorage.getItem(prefixFor(kind) + key);
     if (!raw) return null;
     const entry = JSON.parse(raw);
     if (!entry || Date.now() - entry.at > TTL_MS) {
-      localStorage.removeItem(PREFIX + key);
+      localStorage.removeItem(prefixFor(kind) + key);
       return null;
     }
     return entry.data;
@@ -26,9 +44,9 @@ function readCache(key) {
   }
 }
 
-function writeCache(key, data) {
+function writeCache(kind, key, data) {
   try {
-    localStorage.setItem(PREFIX + key, JSON.stringify({ at: Date.now(), data }));
+    localStorage.setItem(prefixFor(kind) + key, JSON.stringify({ at: Date.now(), data }));
   } catch {
     /* sin cache, sin drama */
   }
@@ -59,7 +77,7 @@ export function dropPlaylistCache(ref) {
   const id = parsePlaylistRef(ref);
   if (!id) return;
   try {
-    localStorage.removeItem(PREFIX + id);
+    localStorage.removeItem(PREFIXES.playlist + id);
   } catch {
     /* sin almacenamiento no habia nada que borrar */
   }
@@ -74,26 +92,36 @@ export function parsePlaylistRef(ref) {
   return match ? match[1] : null;
 }
 
-export async function fetchPlaylist(ref, { signal } = {}) {
-  const id = parsePlaylistRef(ref);
+/** Lo mismo para albumes. Un id pelado tambien vale: quien llama sabe que pide. */
+export function parseAlbumRef(ref) {
+  if (!ref) return null;
+  const value = String(ref).trim();
+  const match = value.match(/album[/:]([A-Za-z0-9]{22})/) || value.match(/^([A-Za-z0-9]{22})$/);
+  return match ? match[1] : null;
+}
+
+/** Carga la fuente entera (metadata, sin previews) tirando de caché si la hay. */
+export async function fetchSource({ kind, id }, { signal } = {}) {
   if (!id) {
-    throw new Error('Ese link no parece una playlist de Spotify.');
+    throw new Error('Ese link no parece una playlist ni un álbum de Spotify.');
   }
 
-  const cached = readCache(id);
+  const cached = readCache(kind, id);
   if (cached) return cached;
 
-  const response = await fetch(`/api/playlist?ref=${encodeURIComponent(id)}`, { signal });
+  const route = kind === 'album' ? 'album' : 'playlist';
+  const response = await fetch(`/api/${route}?ref=${encodeURIComponent(id)}`, { signal });
   const body = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     throw httpError(
-      body.error || `No se pudo cargar la playlist (${response.status}).`,
+      body.error ||
+        `No se pudo cargar ${kind === 'album' ? 'el álbum' : 'la playlist'} (${response.status}).`,
       response.status,
     );
   }
 
-  writeCache(id, body);
+  writeCache(kind, id, body);
   return body;
 }
 
@@ -104,9 +132,9 @@ export async function fetchPlaylist(ref, { signal } = {}) {
  * metadata descarta episodios y pistas locales, asi que las posiciones del
  * cliente no coinciden con los offsets de Spotify.
  */
-export async function fetchPreviews(id, offset, limit, { signal } = {}) {
+export async function fetchPreviews({ kind, id }, offset, limit, { signal } = {}) {
   const response = await fetch(
-    `/api/previews?ref=${encodeURIComponent(id)}&offset=${offset}&limit=${limit}`,
+    `/api/previews?ref=${encodeURIComponent(id)}&kind=${kind}&offset=${offset}&limit=${limit}`,
     { signal },
   );
 
@@ -130,7 +158,8 @@ export async function fetchPreviews(id, offset, limit, { signal } = {}) {
  * pero no sonaria ni una cancion. Se cachea lo caro (los datos de Spotify) y
  * los audios se vuelven a resolver, que es rapido.
  */
-export function cachePlaylist(id, data) {
+export function cachePlaylist({ kind, id }, data) {
   const tracks = data.tracks.map(({ previewUrl, previewSource, ...rest }) => rest);
-  writeCache(id, { ...data, tracks });
+  writeCache(kind, id, { ...data, tracks });
 }
+

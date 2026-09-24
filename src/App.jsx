@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AlbumRail from './components/AlbumRail.jsx';
 import Backdrop from './components/Backdrop.jsx';
+import Cover from './components/Cover.jsx';
 import Footer from './components/Footer.jsx';
 import MiniPlayer from './components/MiniPlayer.jsx';
 import PlaylistMenu from './components/PlaylistMenu.jsx';
@@ -12,11 +14,13 @@ import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
 import { EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
 import { PLAYLISTS } from './config/playlists.js';
+import { ALBUMS } from './config/albums.js';
 import {
   cachePlaylist,
   dropPlaylistCache,
-  fetchPlaylist,
   fetchPreviews,
+  fetchSource,
+  parseAlbumRef,
   parsePlaylistRef,
 } from './lib/api.js';
 import { dominantColor } from './lib/color.js';
@@ -141,6 +145,42 @@ function readCustomEntries() {
   }
 }
 
+/* Los albumes del repo, resueltos una sola vez. El rotulo va al lado del id y no
+   en dos listas paralelas: al descartar los links invalidos las posiciones
+   dejarian de corresponderse y saldria el nombre de un disco debajo de otro. */
+const ALBUM_ENTRIES = ALBUMS.map((item) => ({
+  id: parseAlbumRef(item.ref),
+  label: item.label || 'Álbum',
+})).filter((entry) => entry.id);
+
+/* Criterios que un album no puede ofrecer. Fuera del componente para que sea
+   siempre el mismo array y no rompa el memo de la barra de herramientas. */
+const SORTS_OFF_ALBUM = ['added'];
+
+/* Con que abre la pagina. `?a=` gana a `?p=` porque son excluyentes y la URL
+   siempre lleva sólo uno de los dos; que se miren en este orden sólo importa si
+   alguien construye a mano un enlace con ambos.
+
+   Que `?p=` siga significando lo mismo que antes no es un detalle: todos los
+   enlaces compartidos hasta hoy lo llevan. */
+function readInitialSource() {
+  const params = new URLSearchParams(location.search);
+
+  const album = parseAlbumRef(params.get('a'));
+  if (album) return { kind: 'album', id: album };
+
+  const playlist = parsePlaylistRef(params.get('p'));
+  if (playlist) return { kind: 'playlist', id: playlist };
+
+  const first = [...toEntries(PLAYLISTS), ...readCustomEntries()][0];
+  if (first) return { kind: 'playlist', id: first.id };
+
+  // Sin playlists en la config, un álbum es mejor arranque que una página vacía.
+  return ALBUM_ENTRIES.length
+    ? { kind: 'album', id: ALBUM_ENTRIES[0].id }
+    : { kind: 'playlist', id: null };
+}
+
 export default function App() {
   const reducedMotion = useReducedMotion();
 
@@ -164,13 +204,17 @@ export default function App() {
     persistCustom(customEntries);
   }, [customEntries]);
 
-  // La playlist inicial sale de ?p= para que la vista sea compartible.
-  const [currentId, setCurrentId] = useState(() => {
-    const fromUrl = parsePlaylistRef(new URLSearchParams(location.search).get('p'));
-    if (fromUrl) return fromUrl;
-    const initial = [...toEntries(PLAYLISTS), ...readCustomEntries()][0];
-    return initial ? initial.id : null;
-  });
+  /* La fuente inicial sale de la URL (?p= playlist, ?a= album) para que la
+     vista sea compartible.
+
+     No se llama `source` a propósito: ese nombre ya lo usa como variable local
+     el efecto del acento cromático, ahí abajo. */
+  const [current, setCurrent] = useState(readInitialSource);
+  /* El resto del componente trabaja con el id pelado, como toda la vida. Sólo
+     la carga, la URL y la cabecera necesitan saber además de qué tipo es. */
+  const currentId = current.id;
+  const currentKind = current.kind;
+  const isAlbum = currentKind === 'album';
 
   const [view, setView] = useState(() => {
     try {
@@ -179,6 +223,11 @@ export default function App() {
       return 'list';
     }
   });
+
+  /* La vista que se pinta. Un album va siempre en lista, pero eso NO toca la
+     preferencia guardada: quien tenia puesta la cuadricula la recupera al
+     volver a una playlist, sin haber pulsado nada. */
+  const effectiveView = isAlbum ? 'list' : view;
 
   /* Saludo de bienvenida: una sola vez por navegador. Vuelve a salir con
      `?intro` o con una recarga forzada (Ctrl+Shift+R), el mismo gesto con el
@@ -234,11 +283,16 @@ export default function App() {
   const focusedIndex = hoverIndex ?? keyIndex;
   const currentTrack = tracks[playingIndex] || null;
 
-  /* Cuantas canciones se enseñan de la playlist que se esta viendo. Las del
-     repo, todas; las pegadas, hasta CUSTOM_TRACKS. */
+  /* Cuantas canciones se enseñan de la fuente que se esta viendo. Las del repo
+     —playlists fijas y albumes— todas; las playlists pegadas, hasta
+     CUSTOM_TRACKS. Un album del repo nunca se recorta: es una recomendacion, y
+     media recomendacion no es ninguna. */
   const trackLimit = useMemo(
-    () => (entries.find((entry) => entry.id === currentId)?.custom ? CUSTOM_TRACKS : Infinity),
-    [entries, currentId],
+    () =>
+      !isAlbum && entries.find((entry) => entry.id === currentId)?.custom
+        ? CUSTOM_TRACKS
+        : Infinity,
+    [entries, currentId, isAlbum],
   );
 
   /* Lo que se ve, ya filtrado y ordenado. Cada entrada conserva su indice
@@ -341,13 +395,19 @@ export default function App() {
       try {
         // Ventana alrededor del indice: como se cruza por id, basta con que la
         // pista caiga dentro aunque el offset de Spotify no cuadre exacto.
-        const previews = await fetchPreviews(currentId, Math.max(0, index - 2), 10);
+        const previews = await fetchPreviews(
+          { kind: current.kind, id: currentId },
+          Math.max(0, index - 2),
+          10,
+        );
         setData((prev) => (prev ? mergePreviews(prev, previews) : prev));
       } catch {
         // Da igual: el recorrido secuencial acabara cubriendola.
       }
     },
-    [currentId],
+    /* Los dos primitivos, no el objeto: `current` es nuevo en cada render y
+       meterlo entero rehace este callback sin que haya cambiado nada. */
+    [current.kind, currentId],
   );
 
   const skip = useCallback(
@@ -375,9 +435,11 @@ export default function App() {
     if (next !== -1) preload(tracks[next]?.previewUrl);
   }, [playingIndex, findPlayable, tracks, preload]);
 
-  /* ---------- Carga de la playlist ---------- */
+  /* ---------- Carga de la fuente (playlist o album) ---------- */
 
   useEffect(() => {
+    const source = { kind: currentKind, id: currentId };
+
     if (!currentId) {
       setData(null);
       return undefined;
@@ -393,9 +455,10 @@ export default function App() {
     retriedKeys.current = new Set();
     setHoverIndex(null);
     setKeyIndex(0);
-    /* Playlist nueva, criterios en blanco: mantenerlos confundiria mas que
+    /* Fuente nueva, criterios en blanco: mantenerlos confundiria mas que
        ayudar. "En blanco" es el orden que declare la config, y `original` para
-       las que no declaren ninguno. */
+       las que no declaren ninguno —que es el caso de todos los albumes, donde
+       `original` significa el orden del disco. */
     setQuery('');
     const initialSort = DEFAULT_SORTS.get(currentId) ?? 'original';
     setSortBy(initialSort);
@@ -425,7 +488,7 @@ export default function App() {
         if (controller.signal.aborted) return;
 
         try {
-          const previews = await fetchPreviews(currentId, offset, PREVIEW_CHUNK, {
+          const previews = await fetchPreviews(source, offset, PREVIEW_CHUNK, {
             signal: controller.signal,
           });
           if (controller.signal.aborted) return;
@@ -443,10 +506,10 @@ export default function App() {
       }
 
       // Completa: se cachea ya fusionada para que la proxima visita no repita.
-      if (!controller.signal.aborted) cachePlaylist(currentId, merged);
+      if (!controller.signal.aborted) cachePlaylist(source, merged);
     };
 
-    fetchPlaylist(currentId, { signal: controller.signal })
+    fetchSource(source, { signal: controller.signal })
       .then((payload) => {
         if (controller.signal.aborted) return;
         setData(payload);
@@ -465,23 +528,34 @@ export default function App() {
     return () => controller.abort();
     /* `trackLimit` es un numero, no un objeto: solo cambia de valor al pasar de
        una playlist del repo a una pegada, y eso ya trae un `currentId` nuevo.
-       Ponerlo aqui no dispara recargas de mas. */
-  }, [currentId, stop, trackLimit]);
+       Ponerlo aqui no dispara recargas de mas.
 
-  /* Mantiene ?p= y ?t= sincronizados sin ensuciar el historial, para que la
-     barra de direcciones sea siempre un enlace valido de lo que se esta viendo:
-     ?p= la playlist, ?t= la cancion que suena. */
+       `currentKind` y `currentId` entran sueltos y NO el objeto `current`: seria
+       uno nuevo en cada render, y este efecto para la reproduccion y vacia el
+       estado de la fila que suena. */
+  }, [currentKind, currentId, stop, trackLimit]);
+
+  /* Mantiene la URL sincronizada sin ensuciar el historial, para que la barra
+     de direcciones sea siempre un enlace valido de lo que se esta viendo:
+     ?p= la playlist, ?a= el album, ?t= la cancion que suena.
+
+     Los dos primeros son EXCLUYENTES y por eso se borra siempre el que no toca:
+     si al saltar de un album a una playlist se quedase el ?a= colgando, al
+     recargar volveria el album, que es justo lo que uno acaba de dejar. */
   useEffect(() => {
     const url = new URL(location.href);
+    const param = isAlbum ? 'a' : 'p';
+    const other = isAlbum ? 'p' : 'a';
 
-    if (currentId) url.searchParams.set('p', currentId);
-    else url.searchParams.delete('p');
+    if (currentId) url.searchParams.set(param, currentId);
+    else url.searchParams.delete(param);
+    url.searchParams.delete(other);
 
     if (currentTrack?.id) url.searchParams.set('t', currentTrack.id);
     else url.searchParams.delete('t');
 
     history.replaceState(null, '', url);
-  }, [currentId, currentTrack]);
+  }, [currentId, isAlbum, currentTrack]);
 
   /* Cancion pedida por ?t= al entrar. Se guarda en una ref y se consume UNA
      vez: a partir de ahi la URL la escribimos nosotros con lo que suena, y
@@ -541,10 +615,10 @@ export default function App() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-    /* `view` y `visible` estan aqui porque el NODO cambia con ellos: conmutar
-       lista/cuadricula o filtrar remonta las filas y deja al observer mirando
-       un elemento que ya no esta en el documento. */
-  }, [playingIndex, getNode, view, visible]);
+    /* `effectiveView` y `visible` estan aqui porque el NODO cambia con ellos:
+       conmutar lista/cuadricula o filtrar remonta las filas y deja al observer
+       mirando un elemento que ya no esta en el documento. */
+  }, [playingIndex, getNode, effectiveView, visible]);
 
   /* ---------- Acento cromatico: lo manda la cancion que suena ---------- */
 
@@ -799,6 +873,12 @@ export default function App() {
     player.trackId,
   ]);
 
+  /* Cambiar de fuente. Dos funciones y no una con un parametro: quien las llama
+     sabe siempre cual de las dos cosas esta abriendo, y un id pelado no permite
+     distinguirlo despues. */
+  const selectPlaylist = useCallback((id) => setCurrent({ kind: 'playlist', id }), []);
+  const selectAlbum = useCallback((id) => setCurrent({ kind: 'album', id }), []);
+
   /**
    * Devuelve el motivo del rechazo, o null si la playlist entro.
    *
@@ -816,7 +896,7 @@ export default function App() {
          ocupaba un hueco del tope: `entries` deduplica, asi que la copia no
          llegaba a salir en el menu y no habia aspa con la que recuperarlo. */
       if (fixedEntries.some((entry) => entry.id === id)) {
-        setCurrentId(id);
+        selectPlaylist(id);
         return null;
       }
 
@@ -827,10 +907,10 @@ export default function App() {
 
       // Repetir una que ya esta no es un error: se va a ella y ya.
       if (!known) setCustomEntries((prev) => [...prev, { id, label: null, ref: id, custom: true }]);
-      setCurrentId(id);
+      selectPlaylist(id);
       return null;
     },
-    [customEntries, fixedEntries],
+    [customEntries, fixedEntries, selectPlaylist],
   );
 
   /**
@@ -844,8 +924,14 @@ export default function App() {
     (id) => {
       setCustomEntries((prev) => prev.filter((entry) => entry.id !== id));
       dropPlaylistCache(id);
-      // Si era la que se estaba viendo hay que ir a alguna parte: la primera.
-      setCurrentId((prev) => (prev === id ? (fixedEntries[0]?.id ?? null) : prev));
+      /* Si era la que se estaba viendo hay que ir a alguna parte: la primera.
+         Sólo puede estar viéndose si la fuente es una playlist, así que un
+         álbum abierto no se entera de que han borrado una lista de al lado. */
+      setCurrent((prev) =>
+        prev.kind === 'playlist' && prev.id === id
+          ? { kind: 'playlist', id: fixedEntries[0]?.id ?? null }
+          : prev,
+      );
     },
     [fixedEntries],
   );
@@ -888,6 +974,7 @@ export default function App() {
 
   const viewProps = {
     items: visible,
+    album: isAlbum,
     focusedIndex,
     playingIndex,
     selectedIndex,
@@ -930,8 +1017,10 @@ export default function App() {
           <div className="topbar__right">
             <PlaylistMenu
               entries={entries}
-              activeId={currentId}
-              onSelect={(entry) => setCurrentId(entry.id)}
+              /* Con un album abierto no hay pestaña encendida, y esta bien asi:
+                 ninguna de esas playlists es lo que se esta escuchando. */
+              activeId={isAlbum ? null : currentId}
+              onSelect={(entry) => selectPlaylist(entry.id)}
               adding={adding}
               setAdding={setAdding}
               onSubmit={handleAddPlaylist}
@@ -948,48 +1037,81 @@ export default function App() {
                   onVolume={setVolume}
                   onToggleMute={toggleMute}
                 />
-                <ViewToggle view={view} onChange={setView} />
+                {/* En un album la cuadricula serian trece celdas con la misma
+                    portada, asi que ni se ofrece. La preferencia guardada no se
+                    toca: vuelve sola al abrir una playlist. */}
+                {isAlbum ? null : <ViewToggle view={view} onChange={setView} />}
               </>
             ) : null}
           </div>
         </header>
 
+        <AlbumRail
+          albums={ALBUM_ENTRIES}
+          activeId={isAlbum ? currentId : null}
+          onSelect={selectAlbum}
+          /* Mismo permiso que le damos al menú de arriba: sólo con la fuente ya
+             en pantalla y el saludo fuera. */
+          hint={Boolean(data) && !showSplash}
+        />
+
         <main>
           {loading ? <LoadingList /> : null}
 
           {!loading && error ? (
-            <ErrorState message={error} onRetry={currentId ? () => setCurrentId(currentId) : null} />
+            <ErrorState
+              message={error}
+              onRetry={currentId ? () => setCurrent({ kind: currentKind, id: currentId }) : null}
+            />
           ) : null}
 
           {!loading && !error && !currentId ? <EmptyState onAdd={() => setAdding(true)} /> : null}
 
           {!loading && !error && data ? (
             <>
-              <div className="intro">
-                <p className="intro__eyebrow">Playlist{data.owner ? ` de ${data.owner}` : ''}</p>
+              <div className={`intro${isAlbum && data.art?.lg ? ' intro--art' : ''}`}>
+                {/* Solo en un álbum: la portada es la del disco entero y sale una
+                    vez, arriba. En una playlist cada fila lleva la suya y ahí no
+                    hay una sola imagen que valga por todas. */}
+                {isAlbum && data.art?.lg ? (
+                  <div className="intro__art">
+                    <Cover art={data.art} sizes="(max-width: 720px) 40vw, 200px" />
+                  </div>
+                ) : null}
 
-                <div className="intro__head">
-                  <h1 className="intro__title">{data.name}</h1>
+                <div className="intro__text">
+                  <p className="intro__eyebrow">
+                    {isAlbum ? 'Álbum' : 'Playlist'}
+                    {data.owner ? ` de ${data.owner}` : ''}
+                  </p>
 
-                  <button
-                    type="button"
-                    className="shuffle"
-                    onClick={handleRandom}
-                    disabled={!playableCount}
-                    aria-label="Reproducir una canción al azar"
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M3 7h4l3.5 5L7 17H3M21 7h-4l-7 10H3" />
-                      <path d="M18 4l3 3-3 3M18 14l3 3-3 3" />
-                    </svg>
-                    <span>Al azar</span>
-                  </button>
+                  <div className="intro__head">
+                    <h1 className="intro__title">{data.name}</h1>
+
+                    <button
+                      type="button"
+                      className="shuffle"
+                      onClick={handleRandom}
+                      disabled={!playableCount}
+                      aria-label="Reproducir una canción al azar"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M3 7h4l3.5 5L7 17H3M21 7h-4l-7 10H3" />
+                        <path d="M18 4l3 3-3 3M18 14l3 3-3 3" />
+                      </svg>
+                      <span>Al azar</span>
+                    </button>
+                  </div>
+
+                  <p className="intro__meta">
+                    {data.trackCount} canciones &middot; {playableCount} con preview
+                    {/* Un album no trae descripcion, pero si año y sello, que es
+                        lo que uno mira de un disco. */}
+                    {isAlbum && data.year ? ` · ${data.year}` : ''}
+                    {isAlbum && data.label ? ` · ${data.label}` : ''}
+                    {data.description ? ` — ${data.description}` : ''}
+                  </p>
                 </div>
-
-                <p className="intro__meta">
-                  {data.trackCount} canciones &middot; {playableCount} con preview
-                  {data.description ? ` — ${data.description}` : ''}
-                </p>
               </div>
 
               <Toolbar
@@ -1002,6 +1124,7 @@ export default function App() {
                 /* Lo que se puede llegar a ver, no lo que se tiene cargado: en
                    una pegada decir "3 de 200" cuando el maximo son 49 miente. */
                 total={Math.min(tracks.length, trackLimit)}
+                omit={isAlbum ? SORTS_OFF_ALBUM : undefined}
               />
 
               {/* Centinela: cuando pasa por encima del viewport, el titulo
@@ -1010,7 +1133,7 @@ export default function App() {
 
               {visible.length === 0 ? (
                 <NoMatches query={query} onClear={() => setQuery('')} />
-              ) : view === 'grid' ? (
+              ) : effectiveView === 'grid' ? (
                 /* En la cuadricula la salida entra DENTRO de la reticula, como
                    una casilla mas: una barra suelta bajo un mosaico no se lee
                    como parte de el. */

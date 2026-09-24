@@ -1,7 +1,7 @@
 # music.manuelmartinez.ar
 
-Una galería para escuchar playlists de Spotify. No es un reproductor: suenan
-fragmentos de 30 segundos, y la selección es mía.
+Una galería para escuchar playlists y álbumes de Spotify. No es un reproductor:
+suenan fragmentos de 30 segundos, y la selección es mía.
 
 <https://music.manuelmartinez.ar>
 
@@ -24,6 +24,12 @@ grafo del ecualizador—, que de paso le devuelve el crossfade.
 El fondo difuminado se calcula en un canvas a partir de la portada. Está hecho a
 mano en JavaScript (`src/lib/blurArt.js`) porque `filter: blur()` en CSS se
 rasteriza a la escala final y hundía los fotogramas al reproducir.
+
+Un álbum entra al motor disfrazado de playlist: `/api/album` devuelve la misma
+forma que `/api/playlist`, así que se carga, se ordena, se busca y suena con lo
+que ya había. Lo único que cambia es la cabecera y la fila, que en un disco
+pierde la portada —serían catorce veces la misma— y pone el triángulo sobre el
+número de pista.
 
 React y Vite. Sin dependencias de cliente más allá de React.
 
@@ -54,6 +60,29 @@ resto. Las del repo se ven enteras. La diferencia no es estética: resolver los
 previews de una playlist ajena de 200 pistas son cinco funciones y doscientas
 consultas a Deezer, y hay un límite de peticiones por IP que conviene gastar en
 lo que el visitante vino a escuchar.
+
+## Álbumes
+
+Están en `src/config/albums.js`, y sólo ahí: desde la web no se pueden añadir, a
+diferencia de las playlists. El rótulo se escribe a mano, como en
+`playlists.js`; no se le piden los nombres a Spotify porque son cuatro textos
+que no cambian y sería una petición por visita para escribir algo que ya está en
+el repo.
+
+Se ven como rótulos sueltos bajo un «Álbumes favoritos», sin caja, flotando a
+media altura del lado izquierdo. No empujan nada: la página queda igual que sin
+ellos y ocupan margen que de otro modo está muerto. El corte está en 1320 px,
+que es cuando ese margen da de sí; por debajo pasan al flujo, como una tira
+encima de las canciones.
+
+Llevan su aviso de primera visita, igual que el menú de arriba. Va detrás del
+otro a propósito: si el de las playlists sale en esa misma carga, éste espera a
+la siguiente, que dos globos juntos molestan más de lo que explican. Los dos
+vuelven con `Ctrl+Shift+R`.
+
+Se comparten con `?a=`, igual que las playlists con `?p=`. Los dos son
+excluyentes: al cambiar de una cosa a otra se borra el parámetro que sobra, o al
+recargar volvería lo que se acaba de dejar.
 
 ## Desplegar
 

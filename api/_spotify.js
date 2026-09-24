@@ -28,6 +28,29 @@ export function parsePlaylistId(ref) {
   return match ? match[1] : null;
 }
 
+/**
+ * Lo mismo para albumes.
+ *
+ * Los ids de playlist y de album tienen la misma pinta (22 caracteres en
+ * base62), asi que un id pelado es ambiguo: aqui tambien se acepta, y quien
+ * llama es el que sabe a que endpoint iba.
+ */
+export function parseAlbumId(ref) {
+  if (!ref) return null;
+  const value = String(ref).trim();
+  const match = value.match(/album[/:]([A-Za-z0-9]{22})/) || value.match(/^([A-Za-z0-9]{22})$/);
+  return match ? match[1] : null;
+}
+
+/* Mensajes de 404 por tipo de recurso. El de playlist es el caso raro que hay
+   que explicar: las editoriales de Spotify existen en la web pero devuelven 404
+   en la API publica, y sin decirlo parece que el link este mal copiado. */
+export const NOT_FOUND = {
+  playlist:
+    'Esa playlist no existe, es privada, o pertenece a Spotify. Las playlists editoriales y algorítmicas (Discover Weekly, Top 50, Radar...) están bloqueadas en la API publica: usa una creada por un usuario.',
+  album: 'Ese álbum no existe o no está disponible en la API de Spotify.',
+};
+
 async function requestToken() {
   const id = process.env.SPOTIFY_CLIENT_ID;
   const secret = process.env.SPOTIFY_CLIENT_SECRET;
@@ -66,28 +89,32 @@ async function getToken() {
   return requestToken();
 }
 
-/** GET autenticado. Acepta una ruta (`/playlists/x`) o una URL absoluta de paginacion. */
-export async function spotifyGet(pathOrUrl, retries = 2) {
+/**
+ * GET autenticado. Acepta una ruta (`/playlists/x`) o una URL absoluta de paginacion.
+ *
+ * `notFound` es el mensaje del 404. Va por parametro y no cableado aqui porque
+ * el mismo cliente sirve a playlists y a albumes, y lo que hay que explicar en
+ * cada caso no tiene nada que ver: en una playlist, que las editoriales de
+ * Spotify estan bloqueadas; en un album, que sencillamente no esta.
+ */
+export async function spotifyGet(pathOrUrl, { retries = 2, notFound = NOT_FOUND.playlist } = {}) {
   const token = await getToken();
   const url = pathOrUrl.startsWith('http') ? pathOrUrl : API_BASE + pathOrUrl;
   const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
 
   if (response.status === 401 && retries > 0) {
     cachedToken = null; // token caducado antes de tiempo: renovar y reintentar
-    return spotifyGet(pathOrUrl, retries - 1);
+    return spotifyGet(pathOrUrl, { retries: retries - 1, notFound });
   }
 
   if (response.status === 429 && retries > 0) {
     const waitSeconds = Math.min(Number(response.headers.get('retry-after')) || 1, 5);
     await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
-    return spotifyGet(pathOrUrl, retries - 1);
+    return spotifyGet(pathOrUrl, { retries: retries - 1, notFound });
   }
 
   if (response.status === 404) {
-    throw new SpotifyError(
-      'Esa playlist no existe, es privada, o pertenece a Spotify. Las playlists editoriales y algorítmicas (Discover Weekly, Top 50, Radar...) están bloqueadas en la API publica: usa una creada por un usuario.',
-      404,
-    );
+    throw new SpotifyError(notFound, 404);
   }
 
   if (!response.ok) {
