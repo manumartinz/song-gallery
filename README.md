@@ -75,6 +75,14 @@ ellos y ocupan margen que de otro modo está muerto. El corte está en 1320 px,
 que es cuando ese margen da de sí; por debajo pasan al flujo, como una tira
 encima de las canciones.
 
+En móvil no están: por debajo de 720 px van dentro del desplegable de la barra,
+en su propio bloque bajo las playlists, y el botón pasa a decir lo que suena sea
+de la clase que sea. Once nombres en mayúsculas eran siete líneas y se comían el
+tercio de arriba de la pantalla antes de que asomara una canción — el mismo
+problema que ya tuvieron las pestañas de playlists, y se resuelve igual. Los dos
+cortes son el mismo 720 px a propósito: si no coincidieran quedaría una franja
+de anchos sin álbumes en ninguna parte.
+
 Llevan su aviso de primera visita, igual que el menú de arriba. Va detrás del
 otro a propósito: si el de las playlists sale en esa misma carga, éste espera a
 la siguiente, que dos globos juntos molestan más de lo que explican. Los dos

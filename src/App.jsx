@@ -1000,8 +1000,11 @@ export default function App() {
         {/* `topbar--stuck` lo necesita el CSS para retirar la marca en movil,
             donde el titulo de la playlist ocupa su mismo sitio. */}
         <header className={`topbar${stuckTitle ? ' topbar--stuck' : ''}`}>
+          {/* El apellido va en su propio span para poder retirarlo solo a el en
+              pantallas estrechas: ahi la barra no da para la firma entera y los
+              cuatro controles, y "Manu A." sigue siendo una firma. */}
           <span className="wordmark">
-            <b>Manu A.</b> Martínez
+            <b>Manu A.</b> <span className="wordmark__last">Martínez</span>
           </span>
 
           <button
@@ -1021,6 +1024,11 @@ export default function App() {
                  ninguna de esas playlists es lo que se esta escuchando. */
               activeId={isAlbum ? null : currentId}
               onSelect={(entry) => selectPlaylist(entry.id)}
+              /* Sólo los usa en móvil, donde el desplegable lleva las dos
+                 listas; en ancho los pinta el riel de la izquierda. */
+              albums={ALBUM_ENTRIES}
+              activeAlbumId={isAlbum ? currentId : null}
+              onSelectAlbum={selectAlbum}
               adding={adding}
               setAdding={setAdding}
               onSubmit={handleAddPlaylist}

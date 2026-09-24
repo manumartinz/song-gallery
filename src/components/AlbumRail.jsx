@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 import isHardReload from '../lib/hardReload.js';
 
 const HINT_KEY = 'song-gallery:albums-hint-seen';
@@ -21,6 +22,15 @@ const HINT_MS = 9000;
  * playlists.
  */
 export default function AlbumRail({ albums, activeId, onSelect, hint = false }) {
+  /* En movil esto no se pinta: los albumes viven dentro del desplegable de la
+     barra, que es donde ya se cambia de playlist. Aqui abajo no es sitio —once
+     rotulos son siete lineas antes de la primera cancion— y tenerlos en los dos
+     lados a la vez seria enseñar la misma lista dos veces.
+
+     El corte es el MISMO 720 px con el que el menu se vuelve desplegable, y por
+     eso se decide en JS: si no coincidieran quedaria una franja de anchos sin
+     albumes en ninguna parte. */
+  const compact = useMediaQuery('(max-width: 720px)');
   const [hintOn, setHintOn] = useState(false);
   const rootRef = useRef(null);
 
@@ -50,7 +60,7 @@ export default function AlbumRail({ albums, activeId, onSelect, hint = false }) 
      `Ctrl+Shift+R` salen los dos, que ahí se están pidiendo a propósito y cada
      uno cuelga de un sitio distinto de la pantalla. */
   useEffect(() => {
-    if (!hint || !albums.length) return undefined;
+    if (!hint || !albums.length || compact) return undefined;
 
     const forced = isHardReload();
     if (!forced && navHintPending) return undefined;
@@ -65,7 +75,7 @@ export default function AlbumRail({ albums, activeId, onSelect, hint = false }) 
     setHintOn(true);
     const timer = setTimeout(() => setHintOn(false), HINT_MS);
     return () => clearTimeout(timer);
-  }, [hint, albums.length, navHintPending]);
+  }, [hint, albums.length, navHintPending, compact]);
 
   /* Cualquier gesto sobre los rótulos lo cancela: si ya los está usando, sobra
      explicárselos. El teclado no dispara `pointerdown`, de ahí el onClick de
@@ -81,7 +91,7 @@ export default function AlbumRail({ albums, activeId, onSelect, hint = false }) 
     return () => node.removeEventListener('pointerdown', dismiss);
   }, [hintOn]);
 
-  if (!albums.length) return null;
+  if (!albums.length || compact) return null;
 
   return (
     <nav className="rail" ref={rootRef} aria-label="Álbumes favoritos">

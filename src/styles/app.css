@@ -2283,6 +2283,20 @@ body.is-dragging-body * {
     grid-row: 1;
     grid-column: 1;
     transition: opacity var(--dur-mid) var(--ease-out);
+    /* Red de seguridad. La firma es `nowrap`, asi que sin esto su ancho minimo
+       es intocable: la columna de la derecha no cabia, se desbordaba HACIA LA
+       IZQUIERDA —va alineada al final— y el boton del menu acababa pintado
+       encima de la firma, hasta 76 px en un movil de 360. */
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Y antes de llegar a los puntos suspensivos se sacrifica el apellido, que es
+     lo que sobra: la barra lleva marca, menu, volumen y conmutador de vista, y
+     a estos anchos no caben los cinco. */
+  .wordmark__last {
+    display: none;
   }
 
   .topbar--stuck .wordmark {
@@ -2314,6 +2328,13 @@ body.is-dragging-body * {
   /* El desplegable se ancla a la derecha de la barra. */
   .menu--compact {
     position: relative;
+    /* Ultimo de la fila, no primero. El panel cuelga de este boton con
+       `right: 0`, asi que crece hacia la IZQUIERDA desde donde acabe el boton:
+       con el menu en medio de la barra, el panel se salia por el borde de la
+       pantalla en cuanto un nombre era largo —y los de los albumes lo son—.
+       Puesto al final, su borde derecho ya es el de la barra y el panel tiene
+       todo el ancho para crecer. */
+    order: 1;
   }
 
   .menu__trigger {
@@ -2398,6 +2419,25 @@ body.is-dragging-body * {
     align-items: center;
     justify-content: space-between;
     gap: var(--gap-sm);
+  }
+
+  /* Encabezado de cada bloque del panel: playlists arriba, albumes debajo. Solo
+     aparece cuando hay los dos, asi que no hace falta filete separador: el
+     propio rotulo con su aire ya corta. */
+  .menu__section {
+    margin: 0;
+    padding: 0.2rem 0.2rem 0;
+    font-size: 0.56rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  /* El segundo, con su aire por encima para que se lea como bloque nuevo y no
+     como el pie del anterior. */
+  .menu__section ~ .menu__section {
+    margin-top: var(--gap-sm);
   }
 
   .menu__panel .menu__tab {

@@ -6,13 +6,20 @@ const HINT_KEY = 'song-gallery:nav-hint-seen';
 const HINT_MS = 9000;
 
 /**
- * Selector de playlist: pestañas en escritorio, desplegable en movil.
+ * Selector de fuente: pestañas en escritorio, desplegable en movil.
  *
  * En pantallas estrechas las pestañas no caben. Antes se resolvia con una tira
  * de 58vw con scroll horizontal, y era mal invento: no se veia cuantas
  * playlists habia, ni cual estaba activa si quedaba fuera del recorte, y
  * competia con el arrastre de la lista. Un desplegable dice el nombre de la
  * activa y enseña el resto entero al abrirlo.
+ *
+ * Los ALBUMES entran aqui SOLO en movil, en su propio bloque del desplegable.
+ * En ancho tienen su sitio propio —los rotulos flotando a la izquierda—, pero
+ * ahi no caben: once nombres en mayusculas son siete lineas y se comen el
+ * tercio de arriba de la pantalla antes de que asome una cancion. Es el mismo
+ * problema que ya tuvieron las pestañas, y se resuelve igual. De paso el boton
+ * pasa a decir lo que suena, sea de la clase que sea.
  *
  * El corte es un ARBOL distinto, no el mismo marcado repintado, asi que se
  * decide en JS con `useMediaQuery` y no con una media query a secas.
@@ -26,6 +33,9 @@ export default function PlaylistMenu({
   entries,
   activeId,
   onSelect,
+  albums = [],
+  activeAlbumId = null,
+  onSelectAlbum,
   adding,
   setAdding,
   onSubmit,
@@ -248,7 +258,14 @@ export default function PlaylistMenu({
 
   const hintNode = (
     <p className="menu__hint" role="status">
-      {compact ? 'Tocá para cambiar de playlist' : 'Son playlists: elegí la que quieras'}
+      {compact
+        ? /* En movil el desplegable lleva las dos cosas, asi que el aviso las
+             nombra a las dos; si no hay albumes vuelve a hablar solo de lo que
+             hay. */
+          albums.length
+          ? 'Tocá para cambiar de playlist o álbum'
+          : 'Tocá para cambiar de playlist'
+        : 'Son playlists: elegí la que quieras'}
       <button
         type="button"
         className="menu__hint-close"
@@ -269,23 +286,62 @@ export default function PlaylistMenu({
     );
   }
 
-  const active = entries.find((entry) => entry.id === activeId);
+  /* Lo que se esta oyendo, sea de la clase que sea: es lo que rotula el boton.
+     Con un album abierto ninguna playlist esta activa, y decir "Playlists"
+     mientras suena un disco es mentir sobre donde esta uno. */
+  const activeAlbum = albums.find((album) => album.id === activeAlbumId);
+  const activeEntry = entries.find((entry) => entry.id === activeId);
+  const current = activeAlbum?.label || activeEntry?.label || 'Playlists';
+
+  const chooseAlbum = (id) => {
+    onSelectAlbum(id);
+    setOpen(false);
+  };
 
   return (
-    <nav className="menu menu--compact" ref={rootRef} aria-label="Playlists">
+    <nav className="menu menu--compact" ref={rootRef} aria-label="Playlists y álbumes">
       <button
         type="button"
         className={`menu__trigger${open ? ' menu__trigger--on' : ''}`}
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
       >
-        <span className="menu__current">{active ? active.label : 'Playlists'}</span>
+        <span className="menu__current">{current}</span>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6 9.5l6 6 6-6" />
         </svg>
       </button>
 
-      {open ? <div className="menu__panel">{options}</div> : null}
+      {open ? (
+        <div className="menu__panel">
+          {/* Los encabezados solo cuando hay dos bloques que separar: con la
+              lista de albumes vacia, poner "Playlists" encima de las playlists
+              no dice nada que no diga ya el boton. */}
+          {albums.length ? <p className="menu__section">Playlists</p> : null}
+          {options}
+
+          {albums.length ? (
+            <>
+              <p className="menu__section">Álbumes favoritos</p>
+              {albums.map((album) => {
+                const on = album.id === activeAlbumId;
+                return (
+                  <span className="menu__item" key={album.id}>
+                    <button
+                      type="button"
+                      className={`menu__tab${on ? ' menu__tab--on' : ''}`}
+                      onClick={() => chooseAlbum(album.id)}
+                      aria-current={on ? 'true' : undefined}
+                    >
+                      <span className="menu__label">{album.label}</span>
+                    </button>
+                  </span>
+                );
+              })}
+            </>
+          ) : null}
+        </div>
+      ) : null}
       {showHint ? hintNode : null}
     </nav>
   );
