@@ -1631,9 +1631,9 @@ body.is-dragging-body * {
    anchas; sumando el relleno lateral, que va dentro de la caja. */
 .grid--mosaic {
   --gap: 2px;
-  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--side), minmax(0, 1fr));
   gap: var(--gap);
-  max-width: calc(var(--cols) * 170px + 2 * var(--shell-x));
+  max-width: calc(var(--side) * 150px + 2 * var(--shell-x));
 }
 
 /* La portada entera, del tamaño de toda la reticula, movida para que por esta
@@ -1646,8 +1646,9 @@ body.is-dragging-body * {
   position: absolute;
   left: calc(var(--col) * -1 * (100% + var(--gap)));
   top: calc(var(--row) * -1 * (100% + var(--gap)));
-  width: calc(var(--cols) * 100% + (var(--cols) - 1) * var(--gap));
-  height: calc(var(--rows) * 100% + (var(--rows) - 1) * var(--gap));
+  /* Un cuadrado de `--side` casillas, igual que la portada: nada que recortar. */
+  width: calc(var(--side) * 100% + (var(--side) - 1) * var(--gap));
+  height: calc(var(--side) * 100% + (var(--side) - 1) * var(--gap));
   max-width: none;
   object-fit: cover;
   pointer-events: none;

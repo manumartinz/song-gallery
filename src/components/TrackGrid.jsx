@@ -29,11 +29,15 @@ function CellProgress({ subscribePosition, duration }) {
 /**
  * El trozo de portada que le toca a una casilla del mosaico de un album.
  *
- * Es la portada ENTERA, del tamaño de toda la reticula, desplazada para que por
- * la ventana de la casilla asome solo su parte. Todas piden la misma URL, asi
- * que el navegador la descarga una vez.
+ * Es la portada ENTERA, del tamaño de un bloque de `side` x `side` casillas,
+ * desplazada para que por la ventana de la casilla asome solo su parte. Todas
+ * piden la misma URL, asi que el navegador la descarga una vez.
+ *
+ * La fila va en modulo `side`: en un disco con mas canciones de las que caben
+ * en un cuadrado, la portada vuelve a empezar entera en el bloque siguiente en
+ * vez de estirarse.
  */
-function Piece({ src, slot, cols }) {
+function Piece({ src, slot, side }) {
   return (
     <img
       className="cell__piece"
@@ -41,7 +45,7 @@ function Piece({ src, slot, cols }) {
       alt=""
       decoding="async"
       draggable={false}
-      style={{ '--col': slot % cols, '--row': Math.floor(slot / cols) }}
+      style={{ '--col': slot % side, '--row': Math.floor(slot / side) % side }}
     />
   );
 }
@@ -50,7 +54,7 @@ function GridCell({
   track,
   index,
   mosaic,
-  cols,
+  side,
   isFocused,
   isCurrent,
   isPlaying,
@@ -95,7 +99,7 @@ function GridCell({
         }
       >
         {mosaic ? (
-          <Piece src={mosaic} slot={slot} cols={cols} />
+          <Piece src={mosaic} slot={slot} side={side} />
         ) : (
           <Cover art={track.art} sizes="clamp(88px, 11vw, 150px)" />
         )}
@@ -138,12 +142,13 @@ function GridCell({
 
 const Cell = memo(GridCell);
 
-/* Columnas del mosaico de un album: las justas para que la portada quede lo
-   mas cuadrada posible (13 pistas, 4 x 4). Con topes: por debajo de 3 las
-   casillas serian enormes, y por encima de 5 —4 en movil— cada trozo es tan
-   pequeño que ya no se lee la portada ni el titulo. */
-function mosaicColumns(total, compact) {
-  return Math.min(compact ? 4 : 5, Math.max(3, Math.ceil(Math.sqrt(total))));
+/* Lado del mosaico de un album, en casillas. SIEMPRE cuadrado: las portadas
+   lo son, y una reticula de 4 x 3 obligaba a `object-fit: cover` a recortarle
+   un trozo. Con topes: por debajo de 3 las casillas serian enormes, y por
+   encima de 6 —5 en movil— cada trozo es tan pequeño que ya no se lee ni la
+   portada ni el titulo. */
+function mosaicSide(total, compact) {
+  return Math.min(compact ? 5 : 6, Math.max(3, Math.ceil(Math.sqrt(total))));
 }
 
 export default function TrackGrid({
@@ -171,17 +176,18 @@ export default function TrackGrid({
      porque el trozo va por posicion y no por pista. */
   const moreSlot = moreUrl && moreCount > 0 ? 1 : 0;
   const total = items.length + moreSlot;
-  const cols = mosaic ? mosaicColumns(total, compact) : 0;
-  const rows = mosaic ? Math.ceil(total / cols) : 0;
+  const side = mosaic ? mosaicSide(total, compact) : 0;
 
-  /* Los huecos de la ultima fila se rellenan con su trozo, sin cancion: sin
-     ellos a la portada le faltaria una esquina. */
-  const fillers = mosaic ? cols * rows - total : 0;
+  /* Se completa hasta cerrar el cuadrado —o el ultimo, si el disco da para
+     varios— con casillas que solo llevan su trozo, sin cancion. Sin ellas la
+     portada quedaria a medias. */
+  const block = side * side;
+  const fillers = mosaic ? Math.ceil(total / block) * block - total : 0;
 
   return (
     <ul
       className={`grid${mosaic ? ' grid--mosaic' : ''}`}
-      style={mosaic ? { '--cols': cols, '--rows': rows } : undefined}
+      style={mosaic ? { '--side': side } : undefined}
       onPointerDown={onPointerDown}
       onMouseLeave={() => onHover(null)}
     >
@@ -194,7 +200,7 @@ export default function TrackGrid({
             index={index}
             slot={slot}
             mosaic={mosaic}
-            cols={cols}
+            side={side}
             isFocused={index === focusedIndex}
             isCurrent={isCurrent}
             playable={isPlayable(index)}
@@ -224,7 +230,7 @@ export default function TrackGrid({
         const slot = total + n;
         return (
           <li key={`fill-${slot}`} className="cell cell--piece cell--fill" aria-hidden="true" style={{ '--i': slot }}>
-            <Piece src={mosaic} slot={slot} cols={cols} />
+            <Piece src={mosaic} slot={slot} side={side} />
           </li>
         );
       })}
