@@ -250,13 +250,92 @@ body.is-dragging-body * {
   color: var(--text-faint);
 }
 
+/* Switch Playlists / Álbumes. Una pastilla con dos caras, callada como el
+   resto del riel: la cara encendida se rellena y la otra queda en tono bajo. */
+.rail__switch {
+  display: inline-flex;
+  margin: 0 0 var(--gap-sm);
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.rail__switch-btn {
+  padding: 0.22rem 0.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--text-faint);
+  font: inherit;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.rail__switch-btn:hover,
+.rail__switch-btn:focus-visible {
+  color: var(--text-muted);
+}
+
+.rail__switch-btn--on,
+.rail__switch-btn--on:hover {
+  background: rgba(244, 241, 234, 0.1);
+  color: var(--text);
+}
+
 .rail__list {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--gap-xs) var(--gap-md);
   margin: 0;
   padding: 0;
   list-style: none;
+  animation: hint-drop var(--dur-mid) var(--ease-out);
+}
+
+/* Rótulo + aspa de una playlist pegada. El aspa usa la de `.menu__drop`, que
+   solo asoma al acercarse; aqui la despierta la fila entera. */
+.rail__row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.rail__row:hover .menu__drop,
+.rail__row:focus-within .menu__drop {
+  opacity: 1;
+}
+
+.rail__item .menu__own {
+  margin-left: 0.2rem;
+}
+
+/* El alta por link dentro del riel: el mismo control que en movil, pero el
+   campo cabe en la franja de los rotulos y el aviso de rechazo cuelga hacia la
+   derecha, que es donde hay sitio. */
+.rail__add .menu__input {
+  width: 7.5rem;
+  padding: 0.32rem 0.6rem;
+  font-size: 0.7rem;
+}
+
+.rail__add .menu__add {
+  width: 1.35rem;
+  height: 1.35rem;
+  font-size: 0.85rem;
+}
+
+.rail__add .menu__error {
+  left: 0;
+  right: auto;
+  width: max-content;
+  max-width: 16rem;
+  border-radius: 0.8rem;
 }
 
 /* Mismo tono que las pestañas de arriba: al final son lo mismo, un rotulo que
@@ -362,6 +441,19 @@ body.is-dragging-body * {
     gap: var(--gap-sm);
   }
 
+  /* Todo lo que se pulsa recupera los clicks que la caja deja pasar. */
+  .rail__switch,
+  .rail__row .menu__drop,
+  .rail__add {
+    pointer-events: auto;
+  }
+
+  .rail__row,
+  .rail__add {
+    justify-self: start;
+    max-width: 100%;
+  }
+
   .rail__item {
     pointer-events: auto;
     justify-self: start;
@@ -397,6 +489,12 @@ body.is-dragging-body * {
      `.grid` esta mas abajo en la hoja y su `padding` en atajo borraria este. */
   .shell .grid {
     padding-left: calc(var(--shell-x) + var(--rail-gutter) + var(--gap-md));
+  }
+
+  /* El mosaico de un album es estrecho y va centrado: no llega a la franja de
+     los rotulos, y apartarlo solo lo descentraria. */
+  .shell .grid--mosaic {
+    padding-left: var(--shell-x);
   }
 }
 
@@ -1523,6 +1621,96 @@ body.is-dragging-body * {
   transform: scaleX(var(--progress, 0));
   transform-origin: left;
   pointer-events: none;
+}
+
+/* ---------- Mosaico de un album: la portada repartida ---------- */
+
+/* Columnas fijas y no `auto-fill`: el trozo de cada casilla se calcula con su
+   fila y su columna, y eso solo cuadra si se sabe cuantas hay. El ancho se
+   ata a las columnas para que las casillas no crezcan sin fin en pantallas
+   anchas; sumando el relleno lateral, que va dentro de la caja. */
+.grid--mosaic {
+  --gap: 2px;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--gap);
+  max-width: calc(var(--cols) * 170px + 2 * var(--shell-x));
+}
+
+/* La portada entera, del tamaño de toda la reticula, movida para que por esta
+   casilla asome solo lo suyo. Los porcentajes son de la casilla, y cada salto
+   suma el hueco que las separa, para que el dibujo continue de una a otra sin
+   descuadrarse. `contain: paint` de `.cell` recorta el resto. */
+/* Con `.grid--mosaic .cell` delante para ganar a `.cell__hit img`, que le
+   pondria el tamaño de la casilla y el zoom de la celda enfocada. */
+.grid--mosaic .cell .cell__piece {
+  position: absolute;
+  left: calc(var(--col) * -1 * (100% + var(--gap)));
+  top: calc(var(--row) * -1 * (100% + var(--gap)));
+  width: calc(var(--cols) * 100% + (var(--cols) - 1) * var(--gap));
+  height: calc(var(--rows) * 100% + (var(--rows) - 1) * var(--gap));
+  max-width: none;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  transform: none;
+  filter: brightness(0.5) saturate(0.8);
+  transition: filter var(--dur-hover) var(--ease-out);
+}
+
+.grid--mosaic .cell--focused .cell__piece {
+  filter: brightness(0.85) saturate(1);
+}
+
+/* La que suena se enciende entera: es la unica casilla con la portada a
+   plena luz. */
+.grid--mosaic .cell--current .cell__piece {
+  filter: brightness(1.05) saturate(1.1);
+}
+
+.grid--mosaic .cell--dead .cell__piece {
+  filter: grayscale(1) brightness(0.3);
+}
+
+/* Los huecos del final: solo dibujo, mas apagados que cualquier cancion para
+   que no se confundan con una. */
+.cell--fill {
+  cursor: default;
+}
+
+.grid--mosaic .cell--fill .cell__piece {
+  filter: brightness(0.3) saturate(0.6);
+}
+
+/* Aqui el titulo es lo unico que distingue una casilla de otra, asi que no
+   espera al raton: va siempre a la vista. */
+/* Especifica de mas a proposito: en tactil hay una regla que esconde el velo
+   de la celda enfocada, y aqui no debe esconderse nunca. */
+.grid--mosaic .cell--piece .cell__veil {
+  inset: 0;
+  justify-content: space-between;
+  opacity: 1;
+  transform: none;
+  background: linear-gradient(180deg, transparent 40%, rgba(7, 7, 10, 0.7) 100%);
+}
+
+.grid--mosaic .cell__title {
+  margin-top: auto;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.cell__num {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid--mosaic .cell--current .cell__num {
+  color: var(--accent);
 }
 
 /* ---------- Barra de progreso ---------- */

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import AlbumRail from './components/AlbumRail.jsx';
 import Backdrop from './components/Backdrop.jsx';
 import Cover from './components/Cover.jsx';
 import Footer from './components/Footer.jsx';
@@ -9,6 +8,7 @@ import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
 import TrackList from './components/TrackList.jsx';
 import MoreOnSpotify from './components/MoreOnSpotify.jsx';
+import SourceRail from './components/SourceRail.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
@@ -223,11 +223,6 @@ export default function App() {
       return 'list';
     }
   });
-
-  /* La vista que se pinta. Un album va siempre en lista, pero eso NO toca la
-     preferencia guardada: quien tenia puesta la cuadricula la recupera al
-     volver a una playlist, sin haber pulsado nada. */
-  const effectiveView = isAlbum ? 'list' : view;
 
   /* Saludo de bienvenida: una sola vez por navegador. Vuelve a salir con
      `?intro` o con una recarga forzada (Ctrl+Shift+R), el mismo gesto con el
@@ -615,15 +610,27 @@ export default function App() {
     );
     observer.observe(node);
     return () => observer.disconnect();
-    /* `effectiveView` y `visible` estan aqui porque el NODO cambia con ellos:
+    /* `view` y `visible` estan aqui porque el NODO cambia con ellos:
        conmutar lista/cuadricula o filtrar remonta las filas y deja al observer
        mirando un elemento que ya no esta en el documento. */
-  }, [playingIndex, getNode, effectiveView, visible]);
+  }, [playingIndex, getNode, view, visible]);
 
   /* ---------- Acento cromatico: lo manda la cancion que suena ---------- */
 
+  /* En una playlist cada cancion trae su portada y el color cambia al sonar.
+     Un album tiene una sola, asi que no hace falta esperar a darle al play: el
+     color es el del disco desde que se abre.
+
+     Va como cadena y no mirando `data` en el efecto: `data` cambia con cada
+     tramo de previews que llega, y la URL de la portada no. */
+  const accentSource =
+    currentTrack?.art?.sm ||
+    currentTrack?.art?.lg ||
+    (isAlbum ? data?.art?.sm || data?.image : null) ||
+    null;
+
   useEffect(() => {
-    const source = currentTrack?.art?.sm || currentTrack?.art?.lg;
+    const source = accentSource;
     if (!source) return undefined;
 
     let cancelled = false;
@@ -640,7 +647,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [currentTrack]);
+  }, [accentSource]);
 
   /* ---------- Metadatos para los controles del sistema ---------- */
 
@@ -1024,8 +1031,8 @@ export default function App() {
                  ninguna de esas playlists es lo que se esta escuchando. */
               activeId={isAlbum ? null : currentId}
               onSelect={(entry) => selectPlaylist(entry.id)}
-              /* Sólo los usa en móvil, donde el desplegable lleva las dos
-                 listas; en ancho los pinta el riel de la izquierda. */
+              /* Sólo pinta algo en móvil, donde el desplegable lleva las dos
+                 listas; en ancho las dos van en el riel de la izquierda. */
               albums={ALBUM_ENTRIES}
               activeAlbumId={isAlbum ? currentId : null}
               onSelectAlbum={selectAlbum}
@@ -1045,19 +1052,24 @@ export default function App() {
                   onVolume={setVolume}
                   onToggleMute={toggleMute}
                 />
-                {/* En un album la cuadricula serian trece celdas con la misma
-                    portada, asi que ni se ofrece. La preferencia guardada no se
-                    toca: vuelve sola al abrir una playlist. */}
-                {isAlbum ? null : <ViewToggle view={view} onChange={setView} />}
+                <ViewToggle view={view} onChange={setView} />
               </>
             ) : null}
           </div>
         </header>
 
-        <AlbumRail
+        <SourceRail
+          entries={entries}
+          activePlaylistId={isAlbum ? null : currentId}
+          onSelectPlaylist={selectPlaylist}
+          onRemove={handleRemovePlaylist}
           albums={ALBUM_ENTRIES}
-          activeId={isAlbum ? currentId : null}
-          onSelect={selectAlbum}
+          activeAlbumId={isAlbum ? currentId : null}
+          onSelectAlbum={selectAlbum}
+          activeKind={currentKind}
+          adding={adding}
+          setAdding={setAdding}
+          onSubmit={handleAddPlaylist}
           /* Mismo permiso que le damos al menú de arriba: sólo con la fuente ya
              en pantalla y el saludo fuera. */
           hint={Boolean(data) && !showSplash}
@@ -1141,11 +1153,19 @@ export default function App() {
 
               {visible.length === 0 ? (
                 <NoMatches query={query} onClear={() => setQuery('')} />
-              ) : effectiveView === 'grid' ? (
+              ) : view === 'grid' ? (
                 /* En la cuadricula la salida entra DENTRO de la reticula, como
                    una casilla mas: una barra suelta bajo un mosaico no se lee
-                   como parte de el. */
-                <TrackGrid {...viewProps} moreCount={moreCount} moreUrl={data.externalUrl} />
+                   como parte de el.
+
+                   En un album todas las canciones comparten portada, asi que en
+                   vez de repetirla trece veces se reparte por la reticula. */
+                <TrackGrid
+                  {...viewProps}
+                  mosaic={isAlbum ? data.art?.lg || data.image : null}
+                  moreCount={moreCount}
+                  moreUrl={data.externalUrl}
+                />
               ) : (
                 <>
                   <TrackList {...viewProps} />

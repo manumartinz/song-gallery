@@ -3,8 +3,8 @@
  *
  * Son del repo, como las playlists de `playlists.js` y a diferencia de las que
  * pega el visitante: éstos los ve todo el mundo igual. Desde la web no se
- * pueden añadir álbumes a propósito — el `+` del menú de arriba sigue siendo
- * sólo para playlists.
+ * pueden añadir álbumes a propósito — el `+` del riel sigue siendo sólo para
+ * playlists, y sólo sale en su cara de playlists.
  *
  * El orden es el que se ve en la columna, de arriba abajo.
  *

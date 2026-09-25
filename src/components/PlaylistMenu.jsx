@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import AddPlaylistForm from './AddPlaylistForm.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
 import isHardReload from '../lib/hardReload.js';
 
@@ -6,23 +7,22 @@ const HINT_KEY = 'song-gallery:nav-hint-seen';
 const HINT_MS = 9000;
 
 /**
- * Selector de fuente: pestañas en escritorio, desplegable en movil.
+ * Selector de fuente en movil: un desplegable en la barra de arriba.
  *
- * En pantallas estrechas las pestañas no caben. Antes se resolvia con una tira
- * de 58vw con scroll horizontal, y era mal invento: no se veia cuantas
- * playlists habia, ni cual estaba activa si quedaba fuera del recorte, y
- * competia con el arrastre de la lista. Un desplegable dice el nombre de la
- * activa y enseña el resto entero al abrirlo.
+ * En ancho no pinta nada. Ahi las playlists y los albumes viven juntos en el
+ * riel de la izquierda (`SourceRail`), con un switch para pasar de unas a
+ * otros; tenerlas ademas como pestañas aqui arriba seria enseñar la misma lista
+ * dos veces.
  *
- * Los ALBUMES entran aqui SOLO en movil, en su propio bloque del desplegable.
- * En ancho tienen su sitio propio —los rotulos flotando a la izquierda—, pero
- * ahi no caben: once nombres en mayusculas son siete lineas y se comen el
- * tercio de arriba de la pantalla antes de que asome una cancion. Es el mismo
- * problema que ya tuvieron las pestañas, y se resuelve igual. De paso el boton
- * pasa a decir lo que suena, sea de la clase que sea.
+ * En pantallas estrechas el riel no cabe —once rotulos en mayusculas son siete
+ * lineas antes de la primera cancion— y las pestañas tampoco. Un desplegable
+ * dice el nombre de lo que suena y enseña el resto entero al abrirlo, en dos
+ * bloques: playlists y albumes.
  *
  * El corte es un ARBOL distinto, no el mismo marcado repintado, asi que se
- * decide en JS con `useMediaQuery` y no con una media query a secas.
+ * decide en JS con `useMediaQuery` y no con una media query a secas. Es el
+ * mismo 720 px que usa el riel: si no coincidieran quedaria una franja de
+ * anchos sin selector en ninguna parte.
  *
  * `hint` es permiso, no orden: dice que la pagina esta en un momento apto para
  * enseñar el aviso de primera visita (hay playlist cargada y el splash ya no
@@ -44,20 +44,12 @@ export default function PlaylistMenu({
 }) {
   const compact = useMediaQuery('(max-width: 720px)');
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState('');
-  const [problem, setProblem] = useState(null);
   const [hintOn, setHintOn] = useState(false);
-  const inputRef = useRef(null);
   const rootRef = useRef(null);
-  const formRef = useRef(null);
-
-  useEffect(() => {
-    if (adding) inputRef.current?.focus();
-  }, [adding]);
 
   /* El formulario tambien se abre desde fuera (el boton del estado vacio llama
-     a setAdding). En movil vive dentro del desplegable, asi que hay que abrirlo
-     o ese boton no haria nada visible. */
+     a setAdding). Vive dentro del desplegable, asi que hay que abrirlo o ese
+     boton no haria nada visible. */
   useEffect(() => {
     if (adding && compact) setOpen(true);
   }, [adding, compact]);
@@ -85,37 +77,24 @@ export default function PlaylistMenu({
     };
   }, [open]);
 
-  /* El formulario solo se cerraba al enviar o con Escape, asi que en escritorio
-     se quedaba clavado abierto: no hay boton para desdecirse. Un click fuera lo
-     cierra, igual que el desplegable.
+  /* Aviso de primera visita. El boton se lee como el rotulo de lo que se esta
+     viendo, no como una eleccion, asi que hay quien nunca descubre que hay mas
+     de una playlist. Esto lo señala una vez y se va solo.
 
-     En movil el formulario vive dentro del panel: si este se cierra, `formRef`
-     ya no apunta a nada y el siguiente click de fuera tambien cancela el alta,
-     que es justo lo que se quiere. */
-  useEffect(() => {
-    if (!adding) return undefined;
-
-    const onPointerDown = (event) => {
-      if (!formRef.current?.contains(event.target)) setAdding(false);
-    };
-
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [adding, setAdding]);
-
-  /* Aviso de primera visita. Las pestañas se leen como el rotulo de lo que se
-     esta viendo, no como una eleccion, asi que hay quien nunca descubre que hay
-     mas de una playlist. Esto lo señala una vez y se va solo.
+     Solo en movil: en ancho este componente no pinta nada, y marcar la clave
+     alli la gastaria sin que nadie llegase a ver el globo. El riel tiene el
+     suyo propio.
 
      Se marca como visto al APARECER y no al cerrarse, por lo mismo que el
      splash: quien lo ignore tambien lo ha visto, y volver a sacarlo en cada
-     visita seria una molestia. Con una sola playlist no hay nada que elegir.
+     visita seria una molestia. Con una sola cosa que elegir no hay aviso.
 
      Ctrl+Shift+R lo saca igualmente: es la forma de volver a verlo sin abrir
-     el inspector a borrar la clave. Un visitante normal nunca fuerza una
-     recarga, asi que en la practica esto solo lo nota quien lo busca. */
+     el inspector a borrar la clave. */
+  const choices = entries.length + albums.length;
+
   useEffect(() => {
-    if (!hint || entries.length < 2) return undefined;
+    if (!hint || !compact || choices < 2) return undefined;
 
     const forced = isHardReload();
 
@@ -129,12 +108,11 @@ export default function PlaylistMenu({
     setHintOn(true);
     const timer = setTimeout(() => setHintOn(false), HINT_MS);
     return () => clearTimeout(timer);
-  }, [hint, entries.length]);
+  }, [hint, compact, choices]);
 
   /* Cualquier gesto sobre el menu lo cancela: si ya lo esta usando, sobra
-     explicarselo. Un unico listener en el <nav> cubre pestañas, "+",
-     desplegable y el aspa, porque todo cuelga de ahi. El teclado no dispara
-     `pointerdown`, de ahi el onClick del aspa. */
+     explicarselo. El teclado no dispara `pointerdown`, de ahi el onClick del
+     aspa. */
   useEffect(() => {
     if (!hintOn) return undefined;
 
@@ -146,145 +124,17 @@ export default function PlaylistMenu({
     return () => node.removeEventListener('pointerdown', dismiss);
   }, [hintOn, compact]);
 
-  // Al cerrar el alta no debe quedar un aviso esperando a la proxima apertura.
-  useEffect(() => {
-    if (!adding) setProblem(null);
-  }, [adding]);
-
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const trimmed = value.trim();
-    if (!trimmed) return;
-
-    /* onSubmit devuelve el motivo del rechazo, o null si entro. Se queda aqui,
-       junto al campo donde se ha pegado el link: el aviso global sustituye la
-       pagina entera y te borraria de la pantalla lo que estabas escuchando. */
-    const reason = onSubmit(trimmed);
-    if (reason) {
-      setProblem(reason);
-      return;
-    }
-
-    setValue('');
-    setAdding(false);
-    setOpen(false);
-  };
+  if (!compact) return null;
 
   const choose = (entry) => {
     onSelect(entry);
     setOpen(false);
   };
 
-  // Mismo contenido en los dos modos: solo cambia el envoltorio.
-  const options = (
-    <>
-      {entries.map((entry) => {
-        /* Las pegadas nacen sin nombre y lo reciben cuando contesta Spotify.
-           Mientras tanto hace falta algo que poner en la pestaña. */
-        const label = entry.label || 'Playlist';
-
-        return (
-          /* El aspa va HERMANA del boton, no dentro: un boton dentro de otro es
-             HTML invalido y el navegador desarma el marcado. De ahi el
-             envoltorio. */
-          <span className="menu__item" key={entry.id}>
-            <button
-              type="button"
-              className={`menu__tab${entry.id === activeId ? ' menu__tab--on' : ''}`}
-              onClick={() => choose(entry)}
-              aria-current={entry.id === activeId ? 'true' : undefined}
-            >
-              <span className="menu__label">{label}</span>
-              {entry.custom ? <span className="menu__own">tuya</span> : null}
-            </button>
-
-            {entry.custom ? (
-              <button
-                type="button"
-                className="menu__drop"
-                onClick={() => onRemove(entry.id)}
-                aria-label={`Quitar ${label}`}
-              >
-                &times;
-              </button>
-            ) : null}
-          </span>
-        );
-      })}
-
-      {adding ? (
-        <form className="menu__form" ref={formRef} onSubmit={handleSubmit}>
-          <input
-            ref={inputRef}
-            className="menu__input"
-            type="text"
-            value={value}
-            data-no-drag
-            placeholder="https://open.spotify.com/playlist/..."
-            aria-label="Link de la playlist"
-            onChange={(event) => {
-              setValue(event.target.value);
-              setProblem(null); // corregir el link no debe seguir con la queja puesta
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') setAdding(false);
-            }}
-          />
-          <button type="submit" className="menu__add" aria-label="Cargar playlist">
-            &rarr;
-          </button>
-          {problem ? (
-            <p className="menu__error" role="alert">
-              {problem}
-            </p>
-          ) : null}
-        </form>
-      ) : (
-        <button
-          type="button"
-          className="menu__add"
-          onClick={() => setAdding(true)}
-          aria-label="Añadir una playlist por link"
-        >
-          +
-        </button>
-      )}
-    </>
-  );
-
-  /* Con el desplegable o el alta abiertos el aviso ya no pinta nada, y ademas
-     le taparia el panel. */
-  const showHint = hint && hintOn && !open && !adding;
-
-  const hintNode = (
-    <p className="menu__hint" role="status">
-      {compact
-        ? /* En movil el desplegable lleva las dos cosas, asi que el aviso las
-             nombra a las dos; si no hay albumes vuelve a hablar solo de lo que
-             hay. */
-          albums.length
-          ? 'Tocá para cambiar de playlist o álbum'
-          : 'Tocá para cambiar de playlist'
-        : 'Son playlists: elegí la que quieras'}
-      <button
-        type="button"
-        className="menu__hint-close"
-        onClick={() => setHintOn(false)}
-        aria-label="Entendido"
-      >
-        &times;
-      </button>
-    </p>
-  );
-
-  if (!compact) {
-    return (
-      <nav className="menu" ref={rootRef} aria-label="Playlists">
-        {options}
-        {showHint ? hintNode : null}
-      </nav>
-    );
-  }
+  const chooseAlbum = (id) => {
+    onSelectAlbum(id);
+    setOpen(false);
+  };
 
   /* Lo que se esta oyendo, sea de la clase que sea: es lo que rotula el boton.
      Con un album abierto ninguna playlist esta activa, y decir "Playlists"
@@ -293,10 +143,8 @@ export default function PlaylistMenu({
   const activeEntry = entries.find((entry) => entry.id === activeId);
   const current = activeAlbum?.label || activeEntry?.label || 'Playlists';
 
-  const chooseAlbum = (id) => {
-    onSelectAlbum(id);
-    setOpen(false);
-  };
+  // Con el desplegable o el alta abiertos el aviso ya no pinta nada.
+  const showHint = hintOn && !open && !adding;
 
   return (
     <nav className="menu menu--compact" ref={rootRef} aria-label="Playlists y álbumes">
@@ -317,12 +165,52 @@ export default function PlaylistMenu({
           {/* Los encabezados solo cuando hay dos bloques que separar: con la
               lista de albumes vacia, poner "Playlists" encima de las playlists
               no dice nada que no diga ya el boton. */}
-          {albums.length ? <p className="menu__section">Playlists</p> : null}
-          {options}
+          {albums.length ? <p className="menu__section">Mis playlists favoritas</p> : null}
+
+          {entries.map((entry) => {
+            /* Las pegadas nacen sin nombre y lo reciben cuando contesta
+               Spotify. Mientras tanto hace falta algo que poner. */
+            const label = entry.label || 'Playlist';
+            const on = entry.id === activeId;
+
+            return (
+              /* El aspa va HERMANA del boton, no dentro: un boton dentro de otro
+                 es HTML invalido y el navegador desarma el marcado. */
+              <span className="menu__item" key={entry.id}>
+                <button
+                  type="button"
+                  className={`menu__tab${on ? ' menu__tab--on' : ''}`}
+                  onClick={() => choose(entry)}
+                  aria-current={on ? 'true' : undefined}
+                >
+                  <span className="menu__label">{label}</span>
+                  {entry.custom ? <span className="menu__own">tuya</span> : null}
+                </button>
+
+                {entry.custom ? (
+                  <button
+                    type="button"
+                    className="menu__drop"
+                    onClick={() => onRemove(entry.id)}
+                    aria-label={`Quitar ${label}`}
+                  >
+                    &times;
+                  </button>
+                ) : null}
+              </span>
+            );
+          })}
+
+          <AddPlaylistForm
+            adding={adding}
+            setAdding={setAdding}
+            onSubmit={onSubmit}
+            onDone={() => setOpen(false)}
+          />
 
           {albums.length ? (
             <>
-              <p className="menu__section">Álbumes favoritos</p>
+              <p className="menu__section">Mis álbumes favoritos</p>
               {albums.map((album) => {
                 const on = album.id === activeAlbumId;
                 return (
@@ -342,7 +230,21 @@ export default function PlaylistMenu({
           ) : null}
         </div>
       ) : null}
-      {showHint ? hintNode : null}
+
+      {showHint ? (
+        <p className="menu__hint" role="status">
+          {/* Si no hay albumes vuelve a hablar solo de lo que hay. */}
+          {albums.length ? 'Tocá para cambiar de playlist o álbum' : 'Tocá para cambiar de playlist'}
+          <button
+            type="button"
+            className="menu__hint-close"
+            onClick={() => setHintOn(false)}
+            aria-label="Entendido"
+          >
+            &times;
+          </button>
+        </p>
+      ) : null}
     </nav>
   );
 }

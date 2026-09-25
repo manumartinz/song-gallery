@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react';
+import useMediaQuery from '../hooks/useMediaQuery.js';
 import Cover from './Cover.jsx';
 import EqBars from './EqBars.jsx';
 import MoreOnSpotify from './MoreOnSpotify.jsx';
@@ -25,9 +26,31 @@ function CellProgress({ subscribePosition, duration }) {
  * eso, arrastrar para desplazar la pagina o bien seleccionaba las portadas en
  * azul o bien el navegador se las llevaba con su arrastre nativo de imagenes.
  */
+/**
+ * El trozo de portada que le toca a una casilla del mosaico de un album.
+ *
+ * Es la portada ENTERA, del tamaño de toda la reticula, desplazada para que por
+ * la ventana de la casilla asome solo su parte. Todas piden la misma URL, asi
+ * que el navegador la descarga una vez.
+ */
+function Piece({ src, slot, cols }) {
+  return (
+    <img
+      className="cell__piece"
+      src={src}
+      alt=""
+      decoding="async"
+      draggable={false}
+      style={{ '--col': slot % cols, '--row': Math.floor(slot / cols) }}
+    />
+  );
+}
+
 function GridCell({
   track,
   index,
+  mosaic,
+  cols,
   isFocused,
   isCurrent,
   isPlaying,
@@ -49,6 +72,7 @@ function GridCell({
     isCurrent ? 'cell--current' : '',
     isFocused ? 'cell--focused' : '',
     playable || pending ? '' : 'cell--dead',
+    mosaic ? 'cell--piece' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -70,11 +94,20 @@ function GridCell({
             : `${track.title} de ${track.artistLine} (sin preview disponible)`
         }
       >
-        <Cover art={track.art} sizes="clamp(88px, 11vw, 150px)" />
+        {mosaic ? (
+          <Piece src={mosaic} slot={slot} cols={cols} />
+        ) : (
+          <Cover art={track.art} sizes="clamp(88px, 11vw, 150px)" />
+        )}
 
         <span className="cell__veil">
+          {/* En un album el artista es el mismo en todas: lo que distingue a
+              cada casilla es su numero de pista. */}
+          {mosaic && track.trackNumber ? (
+            <span className="cell__num">{String(track.trackNumber).padStart(2, '0')}</span>
+          ) : null}
           <span className="cell__title">{track.title}</span>
-          <span className="cell__artist">{track.artistLine}</span>
+          {mosaic ? null : <span className="cell__artist">{track.artistLine}</span>}
           {!playable ? <span className="tag--badge">Sin preview</span> : null}
         </span>
 
@@ -105,8 +138,17 @@ function GridCell({
 
 const Cell = memo(GridCell);
 
+/* Columnas del mosaico de un album: las justas para que la portada quede lo
+   mas cuadrada posible (13 pistas, 4 x 4). Con topes: por debajo de 3 las
+   casillas serian enormes, y por encima de 5 —4 en movil— cada trozo es tan
+   pequeño que ya no se lee la portada ni el titulo. */
+function mosaicColumns(total, compact) {
+  return Math.min(compact ? 4 : 5, Math.max(3, Math.ceil(Math.sqrt(total))));
+}
+
 export default function TrackGrid({
   items,
+  mosaic = null,
   focusedIndex,
   playingIndex,
   isPlayable,
@@ -121,8 +163,28 @@ export default function TrackGrid({
   moreCount = 0,
   moreUrl = null,
 }) {
+  const compact = useMediaQuery('(max-width: 720px)');
+
+  /* Un album no tiene una portada por cancion, tiene UNA. En vez de repetirla
+     en cada casilla se reparte: la reticula entera es la portada y cada
+     cancion es un trozo. Ordenar o filtrar mueve las canciones, no el dibujo,
+     porque el trozo va por posicion y no por pista. */
+  const moreSlot = moreUrl && moreCount > 0 ? 1 : 0;
+  const total = items.length + moreSlot;
+  const cols = mosaic ? mosaicColumns(total, compact) : 0;
+  const rows = mosaic ? Math.ceil(total / cols) : 0;
+
+  /* Los huecos de la ultima fila se rellenan con su trozo, sin cancion: sin
+     ellos a la portada le faltaria una esquina. */
+  const fillers = mosaic ? cols * rows - total : 0;
+
   return (
-    <ul className="grid" onPointerDown={onPointerDown} onMouseLeave={() => onHover(null)}>
+    <ul
+      className={`grid${mosaic ? ' grid--mosaic' : ''}`}
+      style={mosaic ? { '--cols': cols, '--rows': rows } : undefined}
+      onPointerDown={onPointerDown}
+      onMouseLeave={() => onHover(null)}
+    >
       {items.map(({ track, index }, slot) => {
         const isCurrent = index === playingIndex;
         return (
@@ -131,6 +193,8 @@ export default function TrackGrid({
             track={track}
             index={index}
             slot={slot}
+            mosaic={mosaic}
+            cols={cols}
             isFocused={index === focusedIndex}
             isCurrent={isCurrent}
             playable={isPlayable(index)}
@@ -155,6 +219,15 @@ export default function TrackGrid({
         slot={items.length}
         onHover={onHover}
       />
+
+      {Array.from({ length: fillers }, (_, n) => {
+        const slot = total + n;
+        return (
+          <li key={`fill-${slot}`} className="cell cell--piece cell--fill" aria-hidden="true" style={{ '--i': slot }}>
+            <Piece src={mosaic} slot={slot} cols={cols} />
+          </li>
+        );
+      })}
     </ul>
   );
 }
