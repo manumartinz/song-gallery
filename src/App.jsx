@@ -23,7 +23,7 @@ import {
   parseAlbumRef,
   parsePlaylistRef,
 } from './lib/api.js';
-import { tag, track } from './lib/clarity.js';
+import { tag, trackEvent } from './lib/clarity.js';
 import { dominantColor } from './lib/color.js';
 import isHardReload from './lib/hardReload.js';
 import { makeFilter, SORTS } from './lib/search.js';
@@ -690,7 +690,7 @@ export default function App() {
          interrumpe lo que este sonando ni cambia el fondo, que sigue atado a
          lo que se oye. */
       if (!isPlayable(index)) {
-        track('play_unavailable');
+        trackEvent('play_unavailable');
         setSelectedIndex(index);
         setKeyIndex(index);
         return;
@@ -703,7 +703,7 @@ export default function App() {
         toggle();
         return;
       }
-      track('play');
+      trackEvent('play');
       startTrack(index);
     },
     [wasDragged, tracks, playingIndex, toggle, startTrack, isPending, isPlayable, resolveNow],
@@ -716,7 +716,7 @@ export default function App() {
      pulsar el criterio activo invierte el sentido. */
   const handleSort = useCallback(
     (key) => {
-      track(`sort_${key}`);
+      trackEvent(`sort_${key}`);
       if (key === sortBy) {
         setSortDir((direction) => -direction);
         return;
@@ -734,7 +734,7 @@ export default function App() {
     if (!playable.length) return;
 
     const pool = playable.length > 1 ? playable.filter((i) => i !== playingIndex) : playable;
-    track('random');
+    trackEvent('random');
     startTrack(pool[Math.floor(Math.random() * pool.length)]);
   }, [visible, isPlayable, playingIndex, startTrack]);
 
@@ -792,7 +792,7 @@ export default function App() {
       next.add(failed);
       return next;
     });
-    track('preview_failed');
+    trackEvent('preview_failed');
     setPlayingIndex(-1);
 
     // Guardarrail: si fallan varias seguidas no recorremos la lista sola.
@@ -891,11 +891,11 @@ export default function App() {
      sabe siempre cual de las dos cosas esta abriendo, y un id pelado no permite
      distinguirlo despues. */
   const selectPlaylist = useCallback((id) => {
-    track('source_change');
+    trackEvent('source_change');
     setCurrent({ kind: 'playlist', id });
   }, []);
   const selectAlbum = useCallback((id) => {
-    track('source_change');
+    trackEvent('source_change');
     setCurrent({ kind: 'album', id });
   }, []);
 
@@ -917,7 +917,7 @@ export default function App() {
     (value) => {
       const id = parsePlaylistRef(value);
       if (!id) {
-        track('playlist_rejected');
+        trackEvent('playlist_rejected');
         return 'Ese link no parece una playlist de Spotify.';
       }
 
@@ -931,13 +931,13 @@ export default function App() {
 
       const known = customEntries.some((entry) => entry.id === id);
       if (!known && customEntries.length >= MAX_CUSTOM) {
-        track('playlist_rejected');
+        trackEvent('playlist_rejected');
         return `Solo caben ${MAX_CUSTOM} playlists pegadas. Quitá una para añadir otra.`;
       }
 
       // Repetir una que ya esta no es un error: se va a ella y ya.
       if (!known) {
-        track('playlist_added');
+        trackEvent('playlist_added');
         setCustomEntries((prev) => [...prev, { id, label: null, ref: id, custom: true }]);
       }
       selectPlaylist(id);
@@ -955,7 +955,7 @@ export default function App() {
    */
   const handleRemovePlaylist = useCallback(
     (id) => {
-      track('playlist_removed');
+      trackEvent('playlist_removed');
       setCustomEntries((prev) => prev.filter((entry) => entry.id !== id));
       dropPlaylistCache(id);
       /* Si era la que se estaba viendo hay que ir a alguna parte: la primera.

@@ -23,7 +23,7 @@ export function initClarity() {
   }
 }
 
-export function track(name) {
+export function trackEvent(name) {
   if (!ready) return;
   try {
     Clarity.event(name);
