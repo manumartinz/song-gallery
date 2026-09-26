@@ -96,3 +96,7 @@ recargar volvería lo que se acaba de dejar.
 
 Vercel. Las variables `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` van en los
 ajustes del proyecto.
+
+La analítica es Microsoft Clarity, y solo se activa si hay `VITE_CLARITY_ID` en
+el build de producción (en `npm run dev` nunca graba). Va sin cookies: se
+desactivan en el panel de Clarity, en Settings → Setup → Advanced.

@@ -1,3 +1,5 @@
+import { track } from '../lib/clarity.js';
+
 /**
  * Salida a Spotify de una playlist que no se enseña entera.
  *
@@ -31,6 +33,7 @@ export default function MoreOnSpotify({ count, url, variant = 'list', slot = 0, 
           href={url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => track('open_spotify')}
           /* Sin esto la ultima celda por la que se paso se queda resaltada al
              entrar aqui: el `onMouseLeave` de la reticula no llega a dispararse
              porque no se ha salido de ella. */
@@ -48,7 +51,13 @@ export default function MoreOnSpotify({ count, url, variant = 'list', slot = 0, 
   }
 
   return (
-    <a className="more" href={url} target="_blank" rel="noopener noreferrer">
+    <a
+      className="more"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => track('open_spotify')}
+    >
       <span className="more__label">
         Ver playlist completa
         <svg viewBox="0 0 24 24" aria-hidden="true">

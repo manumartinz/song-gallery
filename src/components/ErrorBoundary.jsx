@@ -1,4 +1,5 @@
 import { Component } from 'react';
+import { flagSession, track } from '../lib/clarity.js';
 
 /**
  * Ultima red de seguridad: hasta ahora, un fallo de render dejaba la pagina en
@@ -17,6 +18,8 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('[song-gallery] fallo de render:', error, info?.componentStack);
+    track('render_error');
+    flagSession('render_error');
   }
 
   render() {
