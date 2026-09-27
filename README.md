@@ -103,6 +103,16 @@ sale del mismo analizador que el ecualizador de las filas, repartido en
 cuarenta bandas casi logarítmicas; donde no hay datos (Safari de iOS) dibuja
 una onda calculada. Se cierra con Escape o deslizando hacia abajo.
 
+## Adiviná la canción
+
+Un juego con la fuente abierta (`g`, o el botón del pie): suenan siete
+segundos de una canción y se elige entre cuatro títulos; al contestar sigue
+sonando y aparece la portada. Diez rondas, y al final se puede compartir el
+resultado con un enlace `?juego` que abre el mismo juego a quien lo reciba.
+Los siete segundos se cuentan desde que el audio suena, no desde que se pide.
+Usa el mismo reproductor que la lista con claves propias (`quiz-…`), así que
+mientras está abierto la lista no avanza sola ni atiende al teclado.
+
 ## Fin y radio
 
 Cuando una playlist o un álbum suena entero, en vez de quedarse en silencio

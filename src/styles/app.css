@@ -2875,6 +2875,216 @@ body.is-now .rail {
   border-color: var(--text-muted);
 }
 
+/* ---------- Juego: adiviná la canción ---------- */
+
+/* Misma escena que "Ahora suena": la pagina se retira (body.is-now) y queda
+   el fondo difuminado. Un velo algo mas oscuro, porque aqui se lee mas. */
+.quiz {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(4.5rem + env(safe-area-inset-top)) var(--shell-x)
+    calc(var(--gap-lg) + env(safe-area-inset-bottom));
+  background: rgba(7, 7, 10, 0.72);
+  animation: now-in var(--dur-slow) var(--ease-out);
+}
+
+.quiz__body {
+  display: grid;
+  justify-items: center;
+  gap: var(--gap-md);
+  width: min(100%, 30rem);
+  text-align: center;
+}
+
+.quiz__eyebrow {
+  margin: 0;
+  font-size: 0.64rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.quiz__progress {
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--accent) calc(var(--progress) * 100%),
+    var(--line) calc(var(--progress) * 100%)
+  );
+  transition: background var(--dur-mid) var(--ease-out);
+}
+
+.quiz__title {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.05;
+}
+
+.quiz__text {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+.quiz__start {
+  margin-top: var(--gap-sm);
+  padding: 0.6rem 1.6rem;
+}
+
+.quiz__art {
+  display: grid;
+  place-items: center;
+  width: min(52vw, 13rem);
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(244, 241, 234, 0.05);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.quiz__art--on {
+  animation: now-art var(--dur-slow) var(--ease-out);
+}
+
+.quiz__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.quiz__mystery {
+  font-size: 4rem;
+  font-weight: 700;
+  color: var(--text-faint);
+  animation: pending-pulse 1.6s var(--ease-in-out) infinite;
+}
+
+.quiz__options {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quiz__option {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  width: 100%;
+  min-height: 3.4rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  text-align: left;
+  transition:
+    border-color var(--dur-fast),
+    background var(--dur-fast),
+    opacity var(--dur-mid);
+}
+
+.quiz__option:hover:not(:disabled) {
+  border-color: var(--text-muted);
+  background: rgba(244, 241, 234, 0.04);
+}
+
+.quiz__option:disabled {
+  cursor: default;
+}
+
+.quiz__key {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.quiz__option-text {
+  display: grid;
+  min-width: 0;
+}
+
+.quiz__option-title,
+.quiz__option-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quiz__option-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.quiz__option-artist {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.quiz__option--right {
+  border-color: #7ed6a2;
+  background: rgba(126, 214, 162, 0.12);
+}
+
+.quiz__option--right .quiz__key {
+  border-color: #7ed6a2;
+  color: #7ed6a2;
+}
+
+.quiz__option--wrong {
+  border-color: #f08a7e;
+  background: rgba(240, 138, 126, 0.1);
+}
+
+.quiz__option--wrong .quiz__key {
+  border-color: #f08a7e;
+  color: #f08a7e;
+}
+
+.quiz__option--off {
+  opacity: 0.4;
+}
+
+.quiz__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--gap-sm);
+  margin-top: var(--gap-sm);
+}
+
+/* Para titulos que el lector de pantalla necesita y la vista no. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ---------- Aviso de fin ---------- */
 
 /* Por encima del mini y a su altura: si el mini esta a la vista, el aviso

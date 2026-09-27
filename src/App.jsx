@@ -5,6 +5,7 @@ import EndCard from './components/EndCard.jsx';
 import Footer from './components/Footer.jsx';
 import MiniPlayer from './components/MiniPlayer.jsx';
 import PlayGlyph from './components/PlayGlyph.jsx';
+import Quiz from './components/Quiz.jsx';
 import PlaylistMenu from './components/PlaylistMenu.jsx';
 import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
@@ -175,6 +176,9 @@ export default function App() {
   });
 
   const { play, toggle, seek, stop, preload, getPosition } = player;
+  /* El juego usa el mismo motor. Mientras esta abierto la lista no avanza sola
+     ni atiende al teclado. */
+  const [quizOpen, setQuizOpen] = useState(() => new URLSearchParams(location.search).has('juego'));
   const { setVolume, nudgeVolume, toggleMute } = player;
 
   /* ---------- Carga de la fuente (playlist o album) ---------- */
@@ -577,6 +581,53 @@ export default function App() {
     startTrack(first);
   }, [playingIndex, toggle, findPlayable, startTrack]);
 
+  /* ---------- Juego ---------- */
+
+  const openQuiz = useCallback(() => {
+    trackEvent('quiz_open');
+    stop();
+    setPlayingIndex(-1);
+    setRadio(false);
+    setQuizOpen(true);
+  }, [stop]);
+
+  const closeQuiz = useCallback(() => {
+    setQuizOpen(false);
+    // Salir del juego no deja un ?juego colgando que lo reabra al recargar.
+    const url = new URL(location.href);
+    if (url.searchParams.has('juego')) {
+      url.searchParams.delete('juego');
+      history.replaceState(null, '', url);
+    }
+  }, []);
+
+  /* Lo que entra en el juego: lo que se ve y se puede oir. Vivo a proposito:
+     con un enlace ?juego el juego abre antes de que lleguen los previews, y las
+     rondas se arman al empezar, con lo que haya entonces. */
+  const quizPool = useMemo(
+    () => visible.filter((item) => isPlayable(item.index)).map((item) => item.track),
+    [visible, isPlayable],
+  );
+
+  const shareQuizResult = useCallback(
+    async (score, total) => {
+      trackEvent('quiz_share');
+      const url = new URL(location.origin);
+      url.searchParams.set(isAlbum ? 'a' : 'p', currentId);
+      url.searchParams.set('juego', '');
+      const text = `Reconocí ${score} de ${total} canciones de «${data?.name}». ¿Cuántas reconocés vos?`;
+      const link = url.toString().replace('juego=', 'juego');
+      const result = await shareLink({
+        title: 'Adiviná la canción',
+        text,
+        url: link,
+        copyText: `${text} ${link}`,
+      });
+      if (result === 'copied') notify('Resultado copiado');
+    },
+    [isAlbum, currentId, data?.name, notify],
+  );
+
   /* ---------- Fin de la fuente y radio ---------- */
 
   /* Todo lo que se puede abrir desde la web, en el orden del menu: primero las
@@ -663,6 +714,7 @@ export default function App() {
   }, [radio, player.isPlaying, handleRandom]);
 
   endedRef.current = () => {
+    if (quizOpen) return;
     if (radio) {
       radioNext();
       return;
@@ -714,6 +766,7 @@ export default function App() {
       setShowKeys((open) => !open);
       return;
     }
+    if (quizOpen) return;
     if (showKeys || nowOpen) {
       /* Con la vista grande abierta siguen valiendo los gestos de reproduccion;
          moverse por una lista que no se ve, no. */
@@ -802,6 +855,10 @@ export default function App() {
       case 'f':
         if (!bare(event) || !currentTrack) break;
         setNowOpen(true);
+        break;
+      case 'g':
+        if (!bare(event)) break;
+        openQuiz();
         break;
       default:
         break;
@@ -1165,6 +1222,7 @@ export default function App() {
                 canShuffle={playableCount > 0}
                 radio={radio}
                 onRadio={allSources.length > 1 ? toggleRadio : null}
+                onQuiz={playableCount >= 4 ? openQuiz : null}
               />
             </>
           ) : null}
@@ -1192,6 +1250,17 @@ export default function App() {
             if (first !== -1) startTrack(first);
           }}
           onClose={() => setEnded(false)}
+        />
+      ) : null}
+
+      {quizOpen && data && !loading ? (
+        <Quiz
+          key={data.id}
+          pool={quizPool}
+          sourceName={data.name}
+          player={player}
+          onClose={closeQuiz}
+          onShareResult={shareQuizResult}
         />
       ) : null}
 

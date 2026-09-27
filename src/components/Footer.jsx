@@ -11,6 +11,7 @@ export default function Footer({
   canShuffle,
   radio,
   onRadio,
+  onQuiz,
 }) {
   const [ref, visible] = useInView();
 
@@ -28,6 +29,16 @@ export default function Footer({
           </svg>
           Sonar una al azar
         </button>
+
+        {onQuiz ? (
+          <button type="button" className="foot__action" onClick={onQuiz}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8M12 17.2v.1" />
+            </svg>
+            Adiviná la canción
+          </button>
+        ) : null}
 
         {/* La radio no es de esta playlist: es todo lo de la web, saltando de
             una fuente a otra. Por eso vive aqui, al final, y no arriba. */}

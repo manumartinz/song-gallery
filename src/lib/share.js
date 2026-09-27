@@ -52,8 +52,11 @@ async function copy(text) {
 /**
  * Comparte y devuelve lo que paso, para que quien llama avise:
  * 'shared' | 'copied' | 'cancelled' | 'failed'.
+ *
+ * `copyText` es lo que va al portapapeles cuando no hay hoja de compartir. Por
+ * defecto el enlace solo; el juego copia tambien la frase con el resultado.
  */
-export async function shareLink({ title, text, url }) {
+export async function shareLink({ title, text, url, copyText = url }) {
   if (prefersNativeShare()) {
     try {
       await navigator.share({ title, text, url });
@@ -63,7 +66,7 @@ export async function shareLink({ title, text, url }) {
       /* Cualquier otro fallo: se cae al portapapeles. */
     }
   }
-  return (await copy(url)) ? 'copied' : 'failed';
+  return (await copy(copyText)) ? 'copied' : 'failed';
 }
 
 /** "rgb(176, 145, 90)" -> "b0915a". Lo que no sea un rgb() da null. */

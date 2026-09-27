@@ -372,6 +372,16 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     }
   }, []);
 
+  /** Pausa sin alternar: para quien sabe que quiere silencio (el juego). */
+  const pause = useCallback(() => {
+    const engine = engineRef.current;
+    if (engine.active === -1) return;
+    const deck = engine.decks[engine.active];
+    if (!deck.src || deck.paused) return;
+    deck.pause();
+    setStatus((s) => ({ ...s, isPlaying: false }));
+  }, []);
+
   const seek = useCallback((seconds) => {
     const engine = engineRef.current;
     if (engine.active === -1) return;
@@ -520,6 +530,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     muted,
     play,
     toggle,
+    pause,
     seek,
     stop,
     preload,

@@ -11,6 +11,7 @@ const SHORTCUTS = [
   ['s', 'Una al azar'],
   ['r', 'Radio: todo al azar'],
   ['f', 'Ahora suena, a pantalla completa'],
+  ['g', 'Adiviná la canción'],
   ['/', 'Buscar'],
   ['+  −  ·  m', 'Volumen y silencio'],
   ['?', 'Esta ayuda'],

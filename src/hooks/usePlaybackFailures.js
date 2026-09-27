@@ -35,7 +35,9 @@ export default function usePlaybackFailures({
 
   useEffect(() => {
     const failed = player.failedKey;
-    if (player.error == null || failed == null) return;
+    /* Solo las claves de la lista son indices. El juego reproduce por el mismo
+       motor con claves propias, y sus fallos los lleva el. */
+    if (player.error == null || typeof failed !== 'number') return;
     // Marcar la pista cambia `unplayable`, lo que rehace findPlayable y vuelve
     // a disparar este efecto: sin esta guarda saltaria dos veces por fallo.
     if (handledFailure.current === failed) return;
