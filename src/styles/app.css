@@ -4035,17 +4035,10 @@ body.is-modal {
   min-width: 0;
 }
 
-/* La etiqueta de la cancion hace de titulo del modal: frase corrida, en caja
-   baja y grande, no una etiqueta en versalitas como las demas. */
-.rec__field.rec__field--lead span {
-  margin: 0 2rem var(--gap-xs) 0;
-  font-size: clamp(1.05rem, 3.4vw, 1.25rem);
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  line-height: 1.35;
-  text-transform: none;
-  color: var(--text);
-  text-wrap: pretty;
+/* La primera etiqueta queda a la altura de la X: se aparta de ella. */
+.rec__field--lead span {
+  margin-right: 2.2rem;
+  line-height: 1.5;
 }
 
 .rec__field span {

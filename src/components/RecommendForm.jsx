@@ -137,8 +137,8 @@ function RecommendModal({ onClose }) {
           <>
             <form className="rec" onSubmit={submit}>
               <label className="rec__field rec__field--wide rec__field--lead">
-                {/* Es la pregunta del modal: hace de titulo, y el lector de
-                    pantalla lo anuncia como tal. */}
+                {/* El modal no lleva titulo, solo la X: esta etiqueta es lo que
+                    anuncia el lector de pantalla. */}
                 <span id="rec-title">
                   Recomendame una canción que te guste, que tengas dando vueltas o que simplemente
                   pienses que me puede gustar
