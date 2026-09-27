@@ -34,9 +34,9 @@ describe('checkRecommendation', () => {
   it('rechaza HTML, nombres que son links, demasiados links y relleno', () => {
     expect(checkRecommendation({ ...valid, message: '<script>x</script>' }).ok).toBe(false);
     expect(checkRecommendation({ ...valid, name: 'www.spam.com' }).ok).toBe(false);
-    expect(
-      checkRecommendation({ ...valid, message: 'https://a.com https://b.com' }).error,
-    ).toMatch(/links/);
+    expect(checkRecommendation({ ...valid, message: 'https://a.com https://b.com' }).error).toMatch(
+      /links/,
+    );
     expect(checkRecommendation({ ...valid, message: 'a'.repeat(30) }).ok).toBe(false);
   });
 
