@@ -37,6 +37,7 @@ import {
   readInitialSource,
 } from './lib/sources.js';
 import useAccentColor from './hooks/useAccentColor.js';
+import useDocumentMeta from './hooks/useDocumentMeta.js';
 import useDragScroll from './hooks/useDragScroll.js';
 import useHeard from './hooks/useHeard.js';
 import useKeyboard from './hooks/useKeyboard.js';
@@ -215,6 +216,8 @@ export default function App() {
     trackLimit,
     onReset: resetForSource,
   });
+
+  useDocumentMeta({ kind: currentKind, id: currentId, data });
 
   const tracks = useMemo(() => data?.tracks ?? [], [data]);
   const focusedIndex = hoverIndex ?? keyIndex;
@@ -1113,7 +1116,11 @@ export default function App() {
                     hay una sola imagen que valga por todas. */}
                 {isAlbum && data.art?.lg ? (
                   <div className="intro__art">
-                    <Cover art={data.art} sizes="(max-width: 720px) 40vw, 200px" />
+                    <Cover
+                      art={data.art}
+                      sizes="(max-width: 720px) 40vw, 200px"
+                      alt={`Portada de ${data.name}`}
+                    />
                   </div>
                 ) : null}
 

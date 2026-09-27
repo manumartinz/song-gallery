@@ -4092,3 +4092,31 @@ body.is-modal {
   justify-items: start;
 }
 
+
+/* ---------- Sin JavaScript ---------- */
+
+/* Lo unico que ve quien no ejecuta JS (y lo que lee un buscador que no lo
+   ejecuta): la lista de playlists y discos, con enlaces. */
+.noscript {
+  max-width: var(--list-max);
+  margin: 0 auto;
+  padding: var(--gap-xl) var(--shell-x);
+  line-height: 1.6;
+}
+
+.noscript h1 {
+  font-size: clamp(2rem, 6vw, 3rem);
+  letter-spacing: var(--tracking-tight);
+}
+
+.noscript h2 {
+  margin-top: var(--gap-lg);
+  font-size: 0.72rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.noscript p {
+  color: var(--text-muted);
+}

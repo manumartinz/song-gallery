@@ -1,7 +1,13 @@
-import { describeShare, injectMeta, isCrawler, readShareParams } from './api/_share.js';
+import {
+  describeShare,
+  injectMeta,
+  isCrawler,
+  readShareParams,
+  shareJsonLd,
+} from './api/_share.js';
 
 /**
- * Tarjetas al compartir un enlace concreto.
+ * Tarjetas al compartir un enlace concreto, y lo mismo para los buscadores.
  *
  * La web es una SPA: el HTML que se sirve es siempre el mismo, y los
  * rastreadores de WhatsApp, Twitter, Slack y compañía no ejecutan JavaScript.
@@ -41,11 +47,19 @@ export default async function middleware(request) {
       if (value) image.searchParams.set(key, value);
     }
 
+    // La URL limpia: solo los parametros que la web entiende, en orden fijo.
+    const canonical = new URL('/', url);
+    for (const key of ['p', 'a', 't']) {
+      const value = url.searchParams.get(key);
+      if (value) canonical.searchParams.set(key, value);
+    }
+
     const html = injectMeta(page, {
       title: meta.title,
       description: meta.description,
-      url: url.toString(),
+      url: canonical.toString(),
       image: image.toString(),
+      jsonLd: shareJsonLd(meta, canonical.toString()),
     });
 
     return new Response(html, {

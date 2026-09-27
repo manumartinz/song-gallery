@@ -152,6 +152,21 @@ con el título, la descripción (la nota de la canción, si la tiene) y una imag
 de `/api/og` con la portada. A una persona no la toca. Lo que se cuenta de cada
 enlace se decide en `api/_share.js`.
 
+## Buscadores
+
+No es una web que busque tráfico, pero lo básico está:
+
+- `seo.js` (plugin de Vite) genera en el build `sitemap.xml` y `robots.txt`
+  a partir de la config, y agrega al HTML datos estructurados (la web, quién
+  la hace y sus playlists y discos) y un `<noscript>` con enlaces a cada uno:
+  es lo único con contenido que ve quien no ejecuta JavaScript.
+- En el navegador, el título, la descripción y la canónica siguen a la fuente
+  abierta (`useDocumentMeta`), así cada playlist y disco es su propia página
+  y no un duplicado de la portada.
+- Para los rastreadores, el mismo `middleware.js` de las tarjetas pone la
+  canónica limpia (sólo `p`, `a` y `t`) y los datos de la canción, playlist
+  o disco. Googlebot y Bingbot están en su lista.
+
 ## Notas
 
 Cada canción puede llevar una nota mía: por qué está, de dónde me viene. Se

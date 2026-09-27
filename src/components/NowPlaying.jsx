@@ -83,7 +83,11 @@ export default function NowPlaying({
 
       <div className="now__body">
         <div className="now__art">
-          <Cover art={track.art} sizes="(max-width: 720px) 80vw, 420px" />
+          <Cover
+            art={track.art}
+            sizes="(max-width: 720px) 80vw, 420px"
+            alt={`Portada de ${track.album || track.title}`}
+          />
         </div>
 
         <div className="now__text">

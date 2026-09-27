@@ -5,8 +5,12 @@
  * el de 640, incluso en las celdas de ~100 px de la cuadricula. Con `sizes`
  * correcto el navegador elige el que toca y el peso de imagenes cae mucho en
  * playlists largas.
+ *
+ * `alt` vacio por defecto: en las filas el titulo esta al lado y la portada es
+ * decorativa. Donde la imagen va sola (la de un disco en la cabecera, la vista
+ * grande) se le pasa el nombre.
  */
-export default function Cover({ art, sizes }) {
+export default function Cover({ art, sizes, alt = '' }) {
   if (!art?.lg) return null;
 
   // Los datos cacheados de antes de este cambio no traen `md`: en ese caso se
@@ -19,7 +23,7 @@ export default function Cover({ art, sizes }) {
       src={art.md || art.lg}
       srcSet={srcSet}
       sizes={sizes}
-      alt=""
+      alt={alt}
       loading="lazy"
       decoding="async"
       draggable={false}

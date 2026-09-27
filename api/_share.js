@@ -117,11 +117,42 @@ function escapeAttr(text) {
     .replace(/>/g, '&gt;');
 }
 
+/** Datos estructurados de lo que se comparte, para los buscadores. */
+export function shareJsonLd(meta, url) {
+  const image = meta.art?.lg || undefined;
+  if (meta.kind === 'track') {
+    return {
+      '@type': 'MusicRecording',
+      name: meta.trackTitle,
+      byArtist: { '@type': 'MusicGroup', name: meta.artist },
+      url,
+      image,
+      ...(meta.note ? { description: meta.note } : {}),
+    };
+  }
+  if (meta.kind === 'album') {
+    return {
+      '@type': 'MusicAlbum',
+      name: meta.sourceName,
+      ...(meta.owner ? { byArtist: { '@type': 'MusicGroup', name: meta.owner } } : {}),
+      url,
+      image,
+    };
+  }
+  return {
+    '@type': 'MusicPlaylist',
+    name: meta.sourceName,
+    author: { '@type': 'Person', name: SITE },
+    url,
+    image,
+  };
+}
+
 /**
  * Reescribe en el HTML las etiquetas de la tarjeta. Cambia el contenido de las
  * que ya hay, no añade: index.html sigue siendo la única fuente de cuáles son.
  */
-export function injectMeta(html, { title, description, url, image }) {
+export function injectMeta(html, { title, description, url, image, jsonLd }) {
   const set = (attr, key, value) => {
     const pattern = new RegExp(`(<meta\\s+${attr}="${key}"\\s+content=")[^"]*(")`, 'i');
     html = html.replace(pattern, `$1${escapeAttr(value)}$2`);
@@ -130,8 +161,20 @@ export function injectMeta(html, { title, description, url, image }) {
   set('property', 'og:title', title);
   set('property', 'og:description', description);
   set('name', 'description', description);
-  if (url) set('property', 'og:url', url);
+  if (url) {
+    set('property', 'og:url', url);
+    // Cada playlist, disco o cancion es su propia pagina, no un duplicado de la portada.
+    html = html.replace(/(<link\s+rel="canonical"\s+href=")[^"]*(")/i, `$1${escapeAttr(url)}$2`);
+  }
   if (image) set('property', 'og:image', image);
   html = html.replace(/<title>[^<]*<\/title>/i, `<title>${escapeAttr(title)}</title>`);
+  if (jsonLd) {
+    // `<` escapado: un titulo con "</script>" no puede cerrar la etiqueta.
+    const data = JSON.stringify({ '@context': 'https://schema.org', ...jsonLd }).replace(
+      /</g,
+      '\\u003c',
+    );
+    html = html.replace('</head>', `<script type="application/ld+json">${data}</script></head>`);
+  }
   return html;
 }
