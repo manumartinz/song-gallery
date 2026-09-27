@@ -19,6 +19,7 @@ import { EmptyState, ErrorState, LoadingList, NoMatches } from './components/Sta
 import { dropPlaylistCache, parsePlaylistRef } from './lib/api.js';
 import { tag, trackEvent } from './lib/clarity.js';
 import isHardReload from './lib/hardReload.js';
+import { facetOptions, hasFacets, makeFacetFilter, NO_FACETS } from './lib/facets.js';
 import { makeFilter, SORTS } from './lib/search.js';
 import { shareLink, trackUrl } from './lib/share.js';
 import {
@@ -144,6 +145,7 @@ export default function App() {
   const [playWhenReady, setPlayWhenReady] = useState(-1);
 
   const [query, setQuery] = useState('');
+  const [facets, setFacets] = useState(NO_FACETS);
   const [sortBy, setSortBy] = useState('original');
   const [sortDir, setSortDir] = useState(1);
 
@@ -186,6 +188,7 @@ export default function App() {
       setHoverIndex(null);
       setKeyIndex(0);
       setQuery('');
+      setFacets(NO_FACETS);
       const initialSort = DEFAULT_SORTS.get(source.id) ?? 'original';
       setSortBy(initialSort);
       setSortDir(SORTS[initialSort].dir);
@@ -208,11 +211,16 @@ export default function App() {
      ORIGINAL: esa es la identidad con la que trabaja todo el estado (que suena,
      que esta abierta, cuales fallaron, el mapa de nodos). Si el estado fuese por
      posicion visible, filtrar u ordenar lo descuadraria todo de golpe. */
+  const [heard, markHeard] = useHeard();
+
   const visible = useMemo(() => {
     const filter = makeFilter(query);
+    // Las escuchadas van en la foto que guarda el chip, no en vivo: ver facets.js.
+    const facetFilter = makeFacetFilter(facets);
     let items = tracks.map((track, index) => ({ track, index }));
 
     if (filter) items = items.filter((item) => filter(item.track));
+    if (facetFilter) items = items.filter((item) => facetFilter(item.track));
 
     const compare = SORTS[sortBy]?.compare;
     if (compare) {
@@ -227,7 +235,7 @@ export default function App() {
        todo lo demas —teclado, findPlayable, "al azar", el registro de filas—
        ya trabaja sobre `visible` y hereda el corte sin enterarse. */
     return items.length > trackLimit ? items.slice(0, trackLimit) : items;
-  }, [tracks, query, sortBy, sortDir, trackLimit]);
+  }, [tracks, query, facets, sortBy, sortDir, trackLimit]);
 
   const { register, scrollTo, getNode } = useRowRegistry();
   const { onPointerDown, wasDragged } = useDragScroll({ enabled: !reducedMotion });
@@ -316,7 +324,6 @@ export default function App() {
   /* Cuenta como escuchada a los diez segundos de sonar, no al darle al play:
      saltar de una en una buscando algo no es haberlas escuchado. Pausar
      reinicia la cuenta, que es lo honesto con un fragmento de treinta. */
-  const [heard, markHeard] = useHeard();
   const playingId = currentTrack?.id ?? null;
 
   useEffect(() => {
@@ -324,6 +331,22 @@ export default function App() {
     const timer = setTimeout(() => markHeard(playingId), HEARD_AFTER_MS);
     return () => clearTimeout(timer);
   }, [playingId, player.isPlaying, markHeard]);
+
+  const facetChoices = useMemo(() => facetOptions(tracks), [tracks]);
+
+  /* Encender "sin escuchar" guarda una foto de las escuchadas en ese momento:
+     lo que se marque despues no saca canciones de la lista mientras se oye. */
+  const handleFacets = useCallback(
+    (change) => {
+      trackEvent('facet');
+      setFacets((prev) => {
+        const next = { ...prev, ...change };
+        if ('unheard' in change) next.unheard = change.unheard ? new Set(heard) : false;
+        return next;
+      });
+    },
+    [heard],
+  );
 
   const heardCount = useMemo(
     () => tracks.reduce((n, track) => n + (heard.has(track.id) ? 1 : 0), 0),
@@ -750,7 +773,7 @@ export default function App() {
 
   /* Con una busqueda puesta no se ofrece: lo que falta ahi son resultados del
      filtro, y contarlos contra el total de la playlist confunde mas que ayuda. */
-  const moreCount = query ? 0 : hiddenCount;
+  const moreCount = query || hasFacets(facets) ? 0 : hiddenCount;
 
   const viewProps = {
     items: visible,
@@ -932,6 +955,7 @@ export default function App() {
               <Toolbar
                 query={query}
                 onQuery={setQuery}
+                filtering={Boolean(query) || hasFacets(facets)}
                 sortBy={sortBy}
                 sortDir={sortDir}
                 onSort={handleSort}
@@ -940,6 +964,11 @@ export default function App() {
                    una pegada decir "3 de 200" cuando el maximo son 49 miente. */
                 total={Math.min(tracks.length, trackLimit)}
                 omit={isAlbum ? SORTS_OFF_ALBUM : undefined}
+                facetChoices={facetChoices}
+                facets={facets}
+                onFacets={handleFacets}
+                /* Sin escuchadas no hay nada que separar. */
+                canFilterUnheard={heardCount > 0}
               />
 
               {/* Centinela: cuando pasa por encima del viewport, el titulo
@@ -947,7 +976,14 @@ export default function App() {
               <div ref={sentinelRef} className="sentinel" aria-hidden="true" />
 
               {visible.length === 0 ? (
-                <NoMatches query={query} onClear={() => setQuery('')} />
+                <NoMatches
+                  query={query}
+                  filtered={hasFacets(facets)}
+                  onClear={() => {
+                    setQuery('');
+                    setFacets(NO_FACETS);
+                  }}
+                />
               ) : view === 'grid' ? (
                 /* En la cuadricula la salida entra DENTRO de la reticula, como
                    una casilla mas: una barra suelta bajo un mosaico no se lee

@@ -59,16 +59,23 @@ export function EmptyState({ onAdd }) {
   );
 }
 
-export function NoMatches({ query, onClear }) {
+export function NoMatches({ query, filtered, onClear }) {
   return (
     <div className="state">
       <h2 className="state__title">Nada coincide</h2>
       <p className="state__body">
-        Ninguna canción de esta playlist encaja con <strong>{query}</strong>.
+        {query ? (
+          <>
+            Ninguna canción de esta playlist encaja con <strong>{query}</strong>
+            {filtered ? ' con esos filtros' : ''}.
+          </>
+        ) : (
+          'Ninguna canción de esta playlist encaja con esos filtros.'
+        )}
       </p>
       <div className="state__form">
         <button type="button" className="state__button" onClick={onClear}>
-          Limpiar la búsqueda
+          {filtered ? 'Quitar los filtros' : 'Limpiar la búsqueda'}
         </button>
       </div>
     </div>

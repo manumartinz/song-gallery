@@ -1217,6 +1217,51 @@ body.is-dragging-body * {
   border-bottom-color: var(--accent);
 }
 
+/* Filtros rapidos: una tira que ocupa el ancho entero bajo el buscador. En
+   movil se desliza de lado en vez de apilarse en tres lineas de chips. */
+.tools__facets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  flex-basis: 100%;
+}
+
+.chip {
+  padding: 0.28rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: color var(--dur-fast), border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.chip:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.chip--on,
+.chip--on:hover {
+  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .tools__facets {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--shell-x));
+    padding-inline: var(--shell-x);
+    scrollbar-width: none;
+  }
+
+  .tools__facets::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .tools__dir {
   font-size: 0.72rem;
   line-height: 1;

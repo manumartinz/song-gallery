@@ -10,7 +10,21 @@ import { SORTS } from '../lib/search.js';
  * comparador devuelve 0 para cualquier par y el boton quedaria puesto sin hacer
  * nada, que es peor que no estar.
  */
-export default function Toolbar({ query, onQuery, sortBy, sortDir, onSort, count, total, omit }) {
+export default function Toolbar({
+  query,
+  onQuery,
+  filtering,
+  sortBy,
+  sortDir,
+  onSort,
+  count,
+  total,
+  omit,
+  facetChoices,
+  facets,
+  onFacets,
+  canFilterUnheard,
+}) {
   const inputRef = useRef(null);
 
   // La tecla "/" enfoca el buscador desde cualquier sitio.
@@ -48,7 +62,7 @@ export default function Toolbar({ query, onQuery, sortBy, sortDir, onSort, count
             }
           }}
         />
-        {query ? (
+        {filtering ? (
           <span className="tools__count">
             {count} de {total}
           </span>
@@ -76,6 +90,53 @@ export default function Toolbar({ query, onQuery, sortBy, sortDir, onSort, count
             );
           })}
       </div>
+
+      <Facets
+        choices={facetChoices}
+        facets={facets}
+        onFacets={onFacets}
+        canFilterUnheard={canFilterUnheard}
+      />
+    </div>
+  );
+}
+
+/**
+ * Chips de genero, decada y "sin escuchar", en una tira bajo el buscador.
+ * Pulsar el encendido lo apaga: son interruptores, no pestañas.
+ */
+function Facets({ choices, facets, onFacets, canFilterUnheard }) {
+  if (!choices || !facets) return null;
+  const { genres, decades } = choices;
+  if (!genres.length && !decades.length && !canFilterUnheard) return null;
+
+  const chip = (key, label, on, change) => (
+    <button
+      key={key}
+      type="button"
+      className={`chip${on ? ' chip--on' : ''}`}
+      onClick={() => onFacets(change)}
+      aria-pressed={on}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="tools__facets" role="group" aria-label="Filtrar">
+      {canFilterUnheard || facets.unheard
+        ? chip('unheard', 'Sin escuchar', Boolean(facets.unheard), { unheard: !facets.unheard })
+        : null}
+      {decades.map(({ value, label }) =>
+        chip(`d${value}`, label, facets.decade === value, {
+          decade: facets.decade === value ? null : value,
+        }),
+      )}
+      {genres.map(({ value, label }) =>
+        chip(`g${value}`, label, facets.genre === value, {
+          genre: facets.genre === value ? null : value,
+        }),
+      )}
     </div>
   );
 }
