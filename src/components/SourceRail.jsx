@@ -104,10 +104,22 @@ export default function SourceRail({
 
   const showAlbums = hasAlbums && tab === 'album';
 
+  /* Las dos caras van montadas a la vez y apiladas en la misma celda: el riel
+     mide lo que la mas alta y no cambia al alternar, asi que el switch no se
+     mueve. La oculta queda `inert` —ni foco ni clicks— y se funde por CSS. */
+  const paneProps = (on) => ({
+    className: `rail__pane${on ? ' rail__pane--on' : ''}`,
+    'aria-hidden': on ? undefined : true,
+    inert: on ? undefined : '',
+  });
+
   return (
     <nav className="rail" ref={rootRef} aria-label="Playlists y álbumes">
       {hasAlbums ? (
-        <div className="rail__switch" role="group" aria-label="Qué lista ver">
+        <div className="rail__switch" role="group" aria-label="Qué lista ver" data-tab={tab}>
+          {/* La pastilla encendida es una sola pieza que se desliza de una cara
+              a la otra, en vez de apagarse en un boton y encenderse en el otro. */}
+          <span className="rail__switch-thumb" aria-hidden="true" />
           {[
             ['playlist', 'Playlists'],
             ['album', 'Álbumes'],
@@ -125,71 +137,76 @@ export default function SourceRail({
         </div>
       ) : null}
 
-      {/* El switch dice qué clase de cosa es; esto dice de quién son. Sin
-          álbumes no hay switch, y el rótulo es lo único que queda encima. */}
-      <p className="rail__eyebrow">
-        {showAlbums ? 'Mis álbumes favoritos' : 'Mis playlists favoritas'}
-      </p>
+      {/* El switch dice qué clase de cosa es; el rótulo de cada cara dice de
+          quién son. Sin álbumes no hay switch, y el rótulo es lo único que
+          queda encima. */}
+      <div className="rail__panes">
+        {hasAlbums ? (
+          <div {...paneProps(showAlbums)}>
+            <p className="rail__eyebrow">Mis álbumes favoritos</p>
+            <ul className="rail__list">
+              {albums.map((album) => {
+                const on = album.id === activeAlbumId;
+                return (
+                  <li key={album.id}>
+                    <button
+                      type="button"
+                      className={`rail__item${on ? ' rail__item--on' : ''}`}
+                      onClick={() => onSelectAlbum(album.id)}
+                      aria-current={on ? 'true' : undefined}
+                    >
+                      {album.label}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
 
-      {showAlbums ? (
-        <ul className="rail__list" key="album">
-          {albums.map((album) => {
-            const on = album.id === activeAlbumId;
-            return (
-              <li key={album.id}>
-                <button
-                  type="button"
-                  className={`rail__item${on ? ' rail__item--on' : ''}`}
-                  onClick={() => onSelectAlbum(album.id)}
-                  aria-current={on ? 'true' : undefined}
-                >
-                  {album.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <ul className="rail__list" key="playlist">
-          {entries.map((entry) => {
-            /* Las pegadas nacen sin nombre y lo reciben cuando contesta
-               Spotify. Mientras tanto hace falta algo que poner. */
-            const label = entry.label || 'Playlist';
-            const on = entry.id === activePlaylistId;
+        <div {...paneProps(!showAlbums)}>
+          <p className="rail__eyebrow">Mis playlists favoritas</p>
+          <ul className="rail__list">
+            {entries.map((entry) => {
+              /* Las pegadas nacen sin nombre y lo reciben cuando contesta
+                 Spotify. Mientras tanto hace falta algo que poner. */
+              const label = entry.label || 'Playlist';
+              const on = entry.id === activePlaylistId;
 
-            return (
-              /* El aspa va HERMANA del boton, no dentro: un boton dentro de otro
-                 es HTML invalido. */
-              <li key={entry.id} className="rail__row">
-                <button
-                  type="button"
-                  className={`rail__item${on ? ' rail__item--on' : ''}`}
-                  onClick={() => onSelectPlaylist(entry.id)}
-                  aria-current={on ? 'true' : undefined}
-                >
-                  {label}
-                  {entry.custom ? <span className="menu__own"> tuya</span> : null}
-                </button>
-
-                {entry.custom ? (
+              return (
+                /* El aspa va HERMANA del boton, no dentro: un boton dentro de
+                   otro es HTML invalido. */
+                <li key={entry.id} className="rail__row">
                   <button
                     type="button"
-                    className="menu__drop"
-                    onClick={() => onRemove(entry.id)}
-                    aria-label={`Quitar ${label}`}
+                    className={`rail__item${on ? ' rail__item--on' : ''}`}
+                    onClick={() => onSelectPlaylist(entry.id)}
+                    aria-current={on ? 'true' : undefined}
                   >
-                    &times;
+                    {label}
+                    {entry.custom ? <span className="menu__own"> tuya</span> : null}
                   </button>
-                ) : null}
-              </li>
-            );
-          })}
 
-          <li className="rail__add">
-            <AddPlaylistForm adding={adding} setAdding={setAdding} onSubmit={onSubmit} />
-          </li>
-        </ul>
-      )}
+                  {entry.custom ? (
+                    <button
+                      type="button"
+                      className="menu__drop"
+                      onClick={() => onRemove(entry.id)}
+                      aria-label={`Quitar ${label}`}
+                    >
+                      &times;
+                    </button>
+                  ) : null}
+                </li>
+              );
+            })}
+
+            <li className="rail__add">
+              <AddPlaylistForm adding={adding} setAdding={setAdding} onSubmit={onSubmit} />
+            </li>
+          </ul>
+        </div>
+      </div>
 
       {hintOn ? (
         <p className="rail__hint" role="status">

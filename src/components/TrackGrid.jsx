@@ -3,6 +3,7 @@ import useMediaQuery from '../hooks/useMediaQuery.js';
 import Cover from './Cover.jsx';
 import EqBars from './EqBars.jsx';
 import MoreOnSpotify from './MoreOnSpotify.jsx';
+import SplitTitle from './SplitTitle.jsx';
 import usePlaybackPosition from '../hooks/usePlaybackPosition.js';
 
 /**
@@ -110,7 +111,9 @@ function GridCell({
           {mosaic && track.trackNumber ? (
             <span className="cell__num">{String(track.trackNumber).padStart(2, '0')}</span>
           ) : null}
-          <span className="cell__title">{track.title}</span>
+          <span className="cell__title">
+            <SplitTitle text={track.title} animate={isCurrent} />
+          </span>
           {mosaic ? null : <span className="cell__artist">{track.artistLine}</span>}
           {!playable ? <span className="tag--badge">Sin preview</span> : null}
         </span>

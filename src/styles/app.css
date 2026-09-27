@@ -251,16 +251,37 @@ body.is-dragging-body * {
 }
 
 /* Switch Playlists / Álbumes. Una pastilla con dos caras, callada como el
-   resto del riel: la cara encendida se rellena y la otra queda en tono bajo. */
+   resto del riel: la cara encendida se rellena y la otra queda en tono bajo.
+   Las dos caras miden igual (1fr 1fr) para que el relleno pueda deslizarse de
+   una a otra con un simple `translateX(100%)`. */
 .rail__switch {
-  display: inline-flex;
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
   margin: 0 0 var(--gap-sm);
   padding: 2px;
   border: 1px solid var(--line);
   border-radius: 999px;
 }
 
+.rail__switch-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 999px;
+  background: rgba(244, 241, 234, 0.1);
+  transition: transform var(--dur-mid) var(--ease-out);
+}
+
+.rail__switch[data-tab='album'] .rail__switch-thumb {
+  transform: translateX(100%);
+}
+
 .rail__switch-btn {
+  position: relative;
+  z-index: 1;
   padding: 0.22rem 0.6rem;
   border: 0;
   border-radius: 999px;
@@ -272,7 +293,7 @@ body.is-dragging-body * {
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
   cursor: pointer;
-  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-mid) var(--ease-out);
 }
 
 .rail__switch-btn:hover,
@@ -282,8 +303,38 @@ body.is-dragging-body * {
 
 .rail__switch-btn--on,
 .rail__switch-btn--on:hover {
-  background: rgba(244, 241, 234, 0.1);
   color: var(--text);
+}
+
+/* Las dos caras en la misma celda: el bloque mide lo que la mas alta, asi que
+   alternar no cambia su altura ni recoloca el switch (ni, en la tira del
+   flujo, empuja las canciones). La que se va se funde mientras entra la otra;
+   `visibility` espera a que acabe el fundido para apagarse. */
+.rail__panes {
+  display: grid;
+}
+
+.rail__pane {
+  grid-area: 1 / 1;
+  min-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition:
+    opacity var(--dur-mid) var(--ease-out),
+    transform var(--dur-mid) var(--ease-out),
+    visibility 0s linear var(--dur-mid);
+}
+
+/* Encima de la que se va, que sigue pintada mientras se funde (los clicks ya
+   no le llegan: esta `inert`). */
+.rail__pane--on {
+  position: relative;
+  z-index: 1;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
 }
 
 .rail__list {
@@ -294,7 +345,6 @@ body.is-dragging-body * {
   margin: 0;
   padding: 0;
   list-style: none;
-  animation: hint-drop var(--dur-mid) var(--ease-out);
 }
 
 /* Rótulo + aspa de una playlist pegada. El aspa usa la de `.menu__drop`, que
@@ -1249,6 +1299,23 @@ body.is-dragging-body * {
   height: var(--row-art-active);
 }
 
+/* Pulso al empezar a sonar: la portada da un salto y suelta un halo del color
+   de acento. Va atado a la clase, asi que pausar y reanudar no lo repite. */
+.row--current .row__art {
+  animation: now-pulse var(--dur-slow) var(--ease-out);
+}
+
+@keyframes now-pulse {
+  from {
+    transform: scale(0.86);
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+  to {
+    transform: none;
+    box-shadow: 0 0 0 18px transparent;
+  }
+}
+
 .row__art img {
   width: 100%;
   height: 100%;
@@ -1528,6 +1595,27 @@ body.is-dragging-body * {
   z-index: 2;
   box-shadow: inset 0 0 0 2px var(--accent);
   pointer-events: none;
+  animation: ring-in var(--dur-slow) var(--ease-out);
+}
+
+/* La version de la cuadricula del pulso de la fila. La celda recorta
+   (`overflow: hidden` y `contain: paint`), asi que el halo no puede salir hacia
+   fuera: entra grueso por dentro y se queda en el anillo de siempre. La portada
+   salta desde mas grande y aterriza en su escala, sea 1 o la del hover. */
+@keyframes ring-in {
+  from {
+    box-shadow: inset 0 0 0 16px var(--accent);
+  }
+}
+
+.cell--current .cell__hit img {
+  animation: cell-pop var(--dur-slow) var(--ease-out);
+}
+
+@keyframes cell-pop {
+  from {
+    transform: scale(1.18);
+  }
 }
 
 .cell--dead .cell__hit img {
@@ -1566,6 +1654,39 @@ body.is-dragging-body * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* --- Titulo letra a letra (SplitTitle) --- */
+
+.split__word {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* inline-block porque un transform no mueve a un elemento en linea. El tope
+   de 28 letras es para que un titulo largo no tarde un siglo en completarse. */
+.split__char {
+  display: inline-block;
+  animation: char-rise var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--c), 28) * 16ms);
+}
+
+@keyframes char-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+}
+
+/* Las duraciones ya caen a 1 ms en tokens.css, pero los retardos no: sin esto
+   las letras aparecerian igualmente una detras de otra. */
+@media (prefers-reduced-motion: reduce) {
+  .split__char,
+  .row--current .row__art,
+  .cell--current::after,
+  .cell--current .cell__hit img {
+    animation: none;
+  }
 }
 
 .cell__artist {

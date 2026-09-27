@@ -3,6 +3,7 @@ import Cover from './Cover.jsx';
 import EqBars from './EqBars.jsx';
 import PlayGlyph from './PlayGlyph.jsx';
 import Scrubber from './Scrubber.jsx';
+import SplitTitle from './SplitTitle.jsx';
 import { capitalize, formatDuration, formatFollowers, formatReleaseDate } from '../lib/format.js';
 
 /**
@@ -112,7 +113,9 @@ function TrackRow({
       )}
 
       <div className="row__main">
-        <h2 className="row__title">{track.title}</h2>
+        <h2 className="row__title">
+          <SplitTitle text={track.title} animate={isCurrent} />
+        </h2>
         <p className="row__artist">{track.artistLine}</p>
       </div>
 
