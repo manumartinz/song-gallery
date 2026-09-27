@@ -10,6 +10,7 @@ import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
 import TrackList from './components/TrackList.jsx';
 import MoreOnSpotify from './components/MoreOnSpotify.jsx';
+import NowPlaying from './components/NowPlaying.jsx';
 import ShortcutsPanel from './components/ShortcutsPanel.jsx';
 import SourceRail from './components/SourceRail.jsx';
 import Toast from './components/Toast.jsx';
@@ -673,6 +674,17 @@ export default function App() {
   });
 
   const [showKeys, setShowKeys] = useState(false);
+  const [nowOpen, setNowOpen] = useState(false);
+  const closeNow = useCallback(() => setNowOpen(false), []);
+  const openNow = useCallback(() => {
+    trackEvent('now_open');
+    setNowOpen(true);
+  }, []);
+
+  // Sin nada sonando no hay "ahora suena" que enseñar.
+  useEffect(() => {
+    if (!currentTrack) setNowOpen(false);
+  }, [currentTrack]);
   const closeKeys = useCallback(() => setShowKeys(false), []);
 
   useKeyboard((event) => {
@@ -686,7 +698,18 @@ export default function App() {
       setShowKeys((open) => !open);
       return;
     }
-    if (showKeys) return;
+    if (showKeys || nowOpen) {
+      /* Con la vista grande abierta siguen valiendo los gestos de reproduccion;
+         moverse por una lista que no se ve, no. */
+      if (!nowOpen) return;
+      if (event.key === ' ') {
+        event.preventDefault();
+        toggle();
+      } else if (bare(event) && event.key === 'n') skip(1);
+      else if (bare(event) && event.key === 'p') skip(-1);
+      else if (bare(event) && event.key === 'f') setNowOpen(false);
+      return;
+    }
 
     // El cursor tambien se mueve por el orden visible, no por el original.
     const step = (delta) => {
@@ -759,6 +782,10 @@ export default function App() {
       case 'r':
         if (!bare(event)) break;
         toggleRadio();
+        break;
+      case 'f':
+        if (!bare(event) || !currentTrack) break;
+        setNowOpen(true);
         break;
       default:
         break;
@@ -901,6 +928,7 @@ export default function App() {
     onHover: handleHover,
     onSeek: seek,
     onShare: handleShare,
+    onExpand: openNow,
     onPointerDown,
   };
 
@@ -1150,8 +1178,24 @@ export default function App() {
         />
       ) : null}
 
+      {nowOpen && currentTrack ? (
+        <NowPlaying
+          track={currentTrack}
+          isPlaying={player.isPlaying}
+          duration={player.duration}
+          subscribePosition={player.subscribePosition}
+          onToggle={toggle}
+          onSeek={seek}
+          onPrev={() => skip(-1)}
+          onNext={() => skip(1)}
+          onShare={() => handleShare(playingIndex)}
+          onClose={closeNow}
+        />
+      ) : null}
+
       <MiniPlayer
         track={currentTrack}
+        onExpand={openNow}
         radio={radio}
         onRadio={toggleRadio}
         isPlaying={player.isPlaying}

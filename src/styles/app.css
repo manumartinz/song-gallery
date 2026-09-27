@@ -2650,6 +2650,231 @@ body.is-dragging-body * {
   border-color: var(--bone);
 }
 
+/* ---------- Ahora suena, a pantalla completa ---------- */
+
+/* El fondo difuminado de la pagina sigue detras: el velo solo lo oscurece lo
+   justo para leer. Por debajo del panel de atajos (9) y del splash (10). */
+.now {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(var(--gap-lg) + env(safe-area-inset-top)) var(--shell-x)
+    calc(var(--gap-lg) + env(safe-area-inset-bottom));
+  background: rgba(7, 7, 10, 0.4);
+  animation: now-in var(--dur-slow) var(--ease-out);
+}
+
+/* La pagina se retira mientras la vista grande esta abierta: sin scroll
+   debajo y sin la lista asomando. El fondo es otro arbol y sigue a la vista. */
+body.is-now {
+  overflow: hidden;
+}
+
+body.is-now .shell,
+body.is-now .mini,
+body.is-now .endcard {
+  visibility: hidden;
+}
+
+/* Las caras del riel fijan su propia visibilidad para el fundido del switch,
+   y eso le ganaria al hidden heredado. */
+body.is-now .rail {
+  display: none;
+}
+
+@keyframes now-in {
+  from {
+    opacity: 0;
+    transform: translateY(4%);
+  }
+}
+
+.now__close {
+  position: fixed;
+  top: calc(var(--gap-md) + env(safe-area-inset-top));
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transform: translateX(-50%);
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+
+.now__close:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.now__close svg,
+.now__controls svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.now__body {
+  display: grid;
+  justify-items: center;
+  gap: var(--gap-md);
+  width: min(100%, 26rem);
+  text-align: center;
+}
+
+.now__art {
+  width: min(100%, 22rem, 42vh);
+  aspect-ratio: 1;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(244, 241, 234, 0.06);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 2rem 4rem rgba(7, 7, 10, 0.6);
+  animation: now-art var(--dur-slow) var(--ease-out);
+}
+
+@keyframes now-art {
+  from {
+    transform: scale(0.92);
+  }
+}
+
+.now__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.now__text {
+  display: grid;
+  gap: 0.3rem;
+  width: 100%;
+}
+
+.now__title {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.now__artist {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.now__note {
+  margin: var(--gap-sm) auto 0;
+  max-width: 36ch;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text);
+  text-wrap: pretty;
+}
+
+.now__note::before {
+  content: '\201C';
+  margin-right: 0.1em;
+  color: var(--accent);
+}
+
+.now__note::after {
+  content: '\201D';
+  margin-left: 0.05em;
+  color: var(--accent);
+}
+
+.viz {
+  width: 100%;
+  height: 3.5rem;
+}
+
+.now__bar {
+  width: 100%;
+}
+
+.now__bar .scrub {
+  margin-top: 0;
+}
+
+.now__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-lg);
+}
+
+.now__controls button {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), background var(--dur-fast), transform var(--dur-fast);
+}
+
+.now__controls button:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.now__controls .now__play {
+  width: 4.2rem;
+  height: 4.2rem;
+  color: var(--ink);
+  background: var(--bone);
+}
+
+.now__controls .now__play:hover {
+  color: var(--ink);
+  background: var(--accent);
+}
+
+.now__controls .now__play:active {
+  transform: scale(0.95);
+}
+
+.now__play svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  fill: currentColor;
+}
+
+.now__extras {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.now__extras button {
+  padding: 0.42rem 0.95rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.now__extras button:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
 /* ---------- Aviso de fin ---------- */
 
 /* Por encima del mini y a su altura: si el mini esta a la vista, el aviso

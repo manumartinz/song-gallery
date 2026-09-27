@@ -23,6 +23,7 @@ export default function TrackList({
   onHover,
   onSeek,
   onShare,
+  onExpand,
   onPointerDown,
 }) {
   return (
@@ -53,6 +54,7 @@ export default function TrackList({
             onHover={onHover}
             onSeek={onSeek}
             onShare={onShare}
+            onExpand={isCurrent ? onExpand : null}
           />
         );
       })}

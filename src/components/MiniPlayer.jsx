@@ -28,6 +28,7 @@ export default function MiniPlayer({
   onFocusRow,
   radio = false,
   onRadio,
+  onExpand,
 }) {
   if (!track) return null;
 
@@ -90,6 +91,20 @@ export default function MiniPlayer({
             <path d="M7 5.5v13L16 12zM17 5.5v13" />
           </svg>
         </button>
+
+        {onExpand ? (
+          <button
+            type="button"
+            onClick={onExpand}
+            tabIndex={reachable}
+            aria-label="Ver a pantalla completa"
+            title="Ahora suena (f)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 14.5l6-6 6 6" />
+            </svg>
+          </button>
+        ) : null}
       </div>
 
       <div className="mini__bar">

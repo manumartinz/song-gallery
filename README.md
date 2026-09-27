@@ -93,6 +93,15 @@ Se comparten con `?a=`, igual que las playlists con `?p=`. Los dos son
 excluyentes: al cambiar de una cosa a otra se borra el parámetro que sobra, o al
 recargar volvería lo que se acaba de dejar.
 
+## Ahora suena
+
+Con `f`, la flecha del mini o «Pantalla completa» en la ficha de la que suena,
+la página se retira y queda la canción sola: portada grande, la nota si la
+hay, controles y un espectro en canvas con el color de la portada. El espectro
+sale del mismo analizador que el ecualizador de las filas, repartido en
+cuarenta bandas casi logarítmicas; donde no hay datos (Safari de iOS) dibuja
+una onda calculada. Se cierra con Escape o deslizando hacia abajo.
+
 ## Fin y radio
 
 Cuando una playlist o un álbum suena entero, en vez de quedarse en silencio

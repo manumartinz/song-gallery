@@ -43,6 +43,7 @@ function TrackRow({
   onHover,
   onSeek,
   onShare,
+  onExpand,
 }) {
   const setNode = useCallback((node) => register(index, node), [register, index]);
   const handleClick = useCallback(() => onSelect(index), [onSelect, index]);
@@ -233,6 +234,19 @@ function TrackRow({
             >
               Otras plataformas
             </a>
+
+            {onExpand ? (
+              <button
+                type="button"
+                className="tag--link"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onExpand();
+                }}
+              >
+                Pantalla completa
+              </button>
+            ) : null}
 
             {onShare ? (
               <button

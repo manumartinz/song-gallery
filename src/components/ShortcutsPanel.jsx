@@ -10,6 +10,7 @@ const SHORTCUTS = [
   ['n  ·  p', 'Siguiente o anterior'],
   ['s', 'Una al azar'],
   ['r', 'Radio: todo al azar'],
+  ['f', 'Ahora suena, a pantalla completa'],
   ['/', 'Buscar'],
   ['+  −  ·  m', 'Volumen y silencio'],
   ['?', 'Esta ayuda'],

@@ -110,6 +110,38 @@ export function isGraphEnabled() {
 }
 
 /**
+ * Espectro para el visualizador grande: `count` niveles entre 0 y 1, de graves
+ * a agudos, o null si no hay datos (mismo criterio que `readLevels`).
+ *
+ * Reparte las bandas en escala casi logaritmica: el oido y la musica viven en
+ * los graves, y un reparto lineal dejaria media pantalla de barras muertas a
+ * la derecha. Del ultimo cuarto del espectro no se usa nada: con fftSize 128 y
+ * previews comprimidos ahi solo hay ruido.
+ */
+export function readSpectrum(count) {
+  if (!graph) return null;
+
+  const { analyser, bins } = graph;
+  analyser.getByteFrequencyData(bins);
+
+  const usable = Math.floor(bins.length * 0.75);
+  const levels = new Array(count);
+  let total = 0;
+
+  for (let band = 0; band < count; band += 1) {
+    const from = Math.floor(usable * (band / count) ** 1.6);
+    const to = Math.max(from + 1, Math.floor(usable * ((band + 1) / count) ** 1.6));
+    let peak = 0;
+    for (let i = from; i < to; i += 1) peak = Math.max(peak, bins[i]);
+    const level = peak / 255;
+    levels[band] = Math.min(1, level * (1 + band / count)); // realza los agudos, que llegan flojos
+    total += level;
+  }
+
+  return total > 0.01 ? levels : null;
+}
+
+/**
  * Devuelve `BANDS` niveles entre 0 y 1, o null si no hay nada que analizar.
  * Un resultado todo a cero (Safari en iOS lo hace) equivale a no tener datos,
  * y quien llama vuelve a la animacion por CSS. Que el analizador vaya despues
