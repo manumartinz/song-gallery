@@ -93,6 +93,16 @@ Se comparten con `?a=`, igual que las playlists con `?p=`. Los dos son
 excluyentes: al cambiar de una cosa a otra se borra el parámetro que sobra, o al
 recargar volvería lo que se acaba de dejar.
 
+## Fin y radio
+
+Cuando una playlist o un álbum suena entero, en vez de quedarse en silencio
+sale un aviso: seguir con la siguiente del menú, encender la radio o volver a
+empezar. La radio (`r`, o el botón del pie) sortea entre todo lo de la web:
+cuatro canciones de una fuente y salta a otra. No salta en cada canción porque
+cada salto carga una fuente entera con sus previews, y el límite por IP se
+gastaría en minutos. Las playlists pegadas no entran: la radio es la selección
+de la casa.
+
 ## Compartir
 
 La ficha de cada canción tiene un «Compartir» que manda el link de esta web con

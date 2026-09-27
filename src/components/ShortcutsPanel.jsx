@@ -9,6 +9,7 @@ const SHORTCUTS = [
   ['← →', 'Atrasar o adelantar 5 s'],
   ['n  ·  p', 'Siguiente o anterior'],
   ['s', 'Una al azar'],
+  ['r', 'Radio: todo al azar'],
   ['/', 'Buscar'],
   ['+  −  ·  m', 'Volumen y silencio'],
   ['?', 'Esta ayuda'],

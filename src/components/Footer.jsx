@@ -4,14 +4,21 @@ import useInView from '../hooks/useInView.js';
  * Cierre al final del scroll. No es una barra fija: se llega a el bajando.
  * Entra animado cuando asoma en pantalla, no al cargar la pagina.
  */
-export default function Footer({ playlistUrl, onRandom, canShuffle }) {
+export default function Footer({
+  playlistUrl,
+  album = false,
+  onRandom,
+  canShuffle,
+  radio,
+  onRadio,
+}) {
   const [ref, visible] = useInView();
 
   return (
     <footer ref={ref} className={`foot${visible ? ' foot--in' : ''}`}>
       <div className="foot__rule" />
 
-      <p className="foot__label">Fin de la playlist</p>
+      <p className="foot__label">{album ? 'Fin del álbum' : 'Fin de la playlist'}</p>
 
       <div className="foot__actions">
         <button type="button" className="foot__action" onClick={onRandom} disabled={!canShuffle}>
@@ -22,12 +29,29 @@ export default function Footer({ playlistUrl, onRandom, canShuffle }) {
           Sonar una al azar
         </button>
 
+        {/* La radio no es de esta playlist: es todo lo de la web, saltando de
+            una fuente a otra. Por eso vive aqui, al final, y no arriba. */}
+        {onRadio ? (
+          <button
+            type="button"
+            className={`foot__action${radio ? ' foot__action--on' : ''}`}
+            onClick={onRadio}
+            aria-pressed={radio}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="2" />
+              <path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8" />
+            </svg>
+            {radio ? 'Radio encendida' : 'Radio: todo al azar'}
+          </button>
+        ) : null}
+
         {playlistUrl ? (
           <a className="foot__action" href={playlistUrl} target="_blank" rel="noreferrer">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M7 17L17 7M9 7h8v8" />
             </svg>
-            Abrirla en Spotify
+            {album ? 'Abrirlo en Spotify' : 'Abrirla en Spotify'}
           </a>
         ) : null}
       </div>

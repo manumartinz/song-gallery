@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Backdrop from './components/Backdrop.jsx';
 import Cover from './components/Cover.jsx';
+import EndCard from './components/EndCard.jsx';
 import Footer from './components/Footer.jsx';
 import MiniPlayer from './components/MiniPlayer.jsx';
 import PlayGlyph from './components/PlayGlyph.jsx';
@@ -49,6 +50,7 @@ import useUrlSync from './hooks/useUrlSync.js';
 const VIEW_KEY = 'song-gallery:view';
 const INTRO_KEY = 'song-gallery:intro-seen'; // lo escribe Splash; aqui solo se consulta
 const HEARD_AFTER_MS = 10_000;
+const RADIO_HOP = 4; // canciones de cada fuente antes de que la radio salte a otra
 
 /** Una tecla sola, sin modificadores: los atajos del navegador van por delante. */
 function bare(event) {
@@ -144,6 +146,9 @@ export default function App() {
      reproduce sola en cuanto llega. -1 = nada esperando. */
   const [playWhenReady, setPlayWhenReady] = useState(-1);
 
+  // La fuente sono entera y no hay siguiente: sale el aviso de fin.
+  const [ended, setEnded] = useState(false);
+
   const [query, setQuery] = useState('');
   const [facets, setFacets] = useState(NO_FACETS);
   const [sortBy, setSortBy] = useState('original');
@@ -189,6 +194,7 @@ export default function App() {
       setKeyIndex(0);
       setQuery('');
       setFacets(NO_FACETS);
+      setEnded(false);
       const initialSort = DEFAULT_SORTS.get(source.id) ?? 'original';
       setSortBy(initialSort);
       setSortDir(SORTS[initialSort].dir);
@@ -309,7 +315,6 @@ export default function App() {
     },
     [findPlayable, playingIndex, startTrack],
   );
-  endedRef.current = () => skip(1);
 
   /* Calienta la cache con el tema siguiente para que el avance automatico
      entre sin hueco. Va por un elemento aparte, no por los decks. */
@@ -555,6 +560,106 @@ export default function App() {
     startTrack(first);
   }, [playingIndex, toggle, findPlayable, startTrack]);
 
+  /* ---------- Fin de la fuente y radio ---------- */
+
+  /* Todo lo que se puede abrir desde la web, en el orden del menu: primero las
+     playlists del repo, luego los albumes. Las pegadas no entran: son del
+     visitante, y la radio es mi seleccion. */
+  const allSources = useMemo(
+    () => [
+      ...fixedEntries.map((entry) => ({ kind: 'playlist', id: entry.id, label: entry.label })),
+      ...ALBUM_ENTRIES.map((album) => ({ kind: 'album', id: album.id, label: album.label })),
+    ],
+    [fixedEntries],
+  );
+
+  // La que viene despues de la abierta, dando la vuelta al final.
+  const nextSource = useMemo(() => {
+    if (allSources.length < 2) return null;
+    const at = allSources.findIndex((s) => s.kind === currentKind && s.id === currentId);
+    return allSources[(at + 1) % allSources.length];
+  }, [allSources, currentKind, currentId]);
+
+  const [radio, setRadio] = useState(false);
+  /* Arranque pendiente tras cambiar de fuente: 'first' o 'random'. Se cumple
+     en cuanto la fuente nueva tenga algo que sonar. */
+  const [autoplay, setAutoplay] = useState(null);
+  const radioPlays = useRef(0);
+
+  /** Abre otra fuente y la deja sonando. */
+  const hopTo = useCallback((source, mode) => {
+    setEnded(false);
+    setAutoplay(mode);
+    setCurrent({ kind: source.kind, id: source.id });
+  }, []);
+
+  useEffect(() => {
+    if (!autoplay || !data || data.id !== currentId) return;
+
+    if (autoplay === 'first') {
+      /* La primera en el orden que se ve. Si esta aun sin resolver se espera
+         a que llegue su tramo: saltarla seria empezar por la segunda. */
+      for (const { index } of visible) {
+        if (isPending(index)) return;
+        if (isPlayable(index)) {
+          setAutoplay(null);
+          startTrack(index);
+          return;
+        }
+      }
+      setAutoplay(null);
+      return;
+    }
+
+    const candidates = visible.map((item) => item.index).filter(isPlayable);
+    if (candidates.length) {
+      setAutoplay(null);
+      startTrack(candidates[Math.floor(Math.random() * candidates.length)]);
+    } else if (!tracks.some((track) => track.previewUrl === undefined)) {
+      setAutoplay(null); // todo resuelto y nada suena: se desiste
+    }
+  }, [autoplay, data, currentId, visible, isPending, isPlayable, startTrack, tracks]);
+
+  /* La radio salta de fuente cada RADIO_HOP canciones y no en cada una: cada
+     salto carga una fuente entera y sus previews, y el limite por IP se
+     agotaria en pocos minutos. Entre salto y salto sortea dentro de la
+     abierta. */
+  const radioNext = useCallback(() => {
+    radioPlays.current += 1;
+    const others = allSources.filter((s) => !(s.kind === currentKind && s.id === currentId));
+    if (others.length && radioPlays.current % RADIO_HOP === 0) {
+      hopTo(others[Math.floor(Math.random() * others.length)], 'random');
+      return;
+    }
+    handleRandom();
+  }, [allSources, currentKind, currentId, hopTo, handleRandom]);
+
+  const toggleRadio = useCallback(() => {
+    setRadio((on) => {
+      trackEvent(on ? 'radio_off' : 'radio_on');
+      return !on;
+    });
+    setEnded(false);
+    radioPlays.current = 0;
+    // Encenderla sin nada sonando es pedir que suene algo ya.
+    if (!radio && !player.isPlaying) handleRandom();
+  }, [radio, player.isPlaying, handleRandom]);
+
+  endedRef.current = () => {
+    if (radio) {
+      radioNext();
+      return;
+    }
+    const next = findPlayable(playingIndex, 1);
+    if (next !== -1) startTrack(next);
+    else setEnded(true);
+  };
+
+  // Cualquier cosa que vuelva a sonar retira el aviso de fin.
+  useEffect(() => {
+    if (player.isPlaying) setEnded(false);
+  }, [player.isPlaying]);
+
   usePlaybackFailures({
     player,
     retriedKeys,
@@ -650,6 +755,10 @@ export default function App() {
       case 's':
         if (!bare(event)) break;
         handleRandom();
+        break;
+      case 'r':
+        if (!bare(event)) break;
+        toggleRadio();
         break;
       default:
         break;
@@ -1006,8 +1115,11 @@ export default function App() {
 
               <Footer
                 playlistUrl={data.externalUrl}
+                album={isAlbum}
                 onRandom={handleRandom}
                 canShuffle={playableCount > 0}
+                radio={radio}
+                onRadio={allSources.length > 1 ? toggleRadio : null}
               />
             </>
           ) : null}
@@ -1023,8 +1135,25 @@ export default function App() {
         ) : null}
       </div>
 
+      {ended && !radio && data ? (
+        <EndCard
+          name={data.name}
+          next={nextSource}
+          onNext={() => hopTo(nextSource, 'first')}
+          onRadio={toggleRadio}
+          onRestart={() => {
+            setEnded(false);
+            const first = findPlayable(-1, 1);
+            if (first !== -1) startTrack(first);
+          }}
+          onClose={() => setEnded(false)}
+        />
+      ) : null}
+
       <MiniPlayer
         track={currentTrack}
+        radio={radio}
+        onRadio={toggleRadio}
         isPlaying={player.isPlaying}
         duration={player.duration}
         subscribePosition={player.subscribePosition}

@@ -26,6 +26,8 @@ export default function MiniPlayer({
   onPrev,
   onNext,
   onFocusRow,
+  radio = false,
+  onRadio,
 }) {
   if (!track) return null;
 
@@ -51,6 +53,22 @@ export default function MiniPlayer({
       </button>
 
       <div className="mini__controls">
+        {/* Solo con la radio encendida: es su interruptor de apagado, y decir
+            "radio" sobre un tema cualquiera explica por que ha cambiado de
+            playlist sola. */}
+        {radio ? (
+          <button
+            type="button"
+            className="mini__radio"
+            onClick={onRadio}
+            tabIndex={reachable}
+            aria-label="Apagar la radio"
+            title="Apagar la radio"
+          >
+            Radio
+          </button>
+        ) : null}
+
         <button type="button" onClick={onPrev} tabIndex={reachable} aria-label="Anterior">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17 5.5v13L8 12zM7 5.5v13" />

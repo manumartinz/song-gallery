@@ -2376,6 +2376,27 @@ body.is-dragging-body * {
   stroke-linejoin: round;
 }
 
+/* Rotulo-interruptor de la radio: una pastilla pequeña con el acento. Se
+   resetean medidas porque hereda las de los botones redondos de al lado. */
+.mini__controls .mini__radio {
+  width: auto;
+  height: auto;
+  margin-right: 0.3rem;
+  padding: 0.18rem 0.55rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.mini__controls .mini__radio:hover {
+  color: var(--ink);
+  background: var(--accent);
+}
+
 /* El de play va relleno, como en las filas, y algo mas grande: es el principal. */
 .mini__play {
   color: var(--text);
@@ -2629,6 +2650,82 @@ body.is-dragging-body * {
   border-color: var(--bone);
 }
 
+/* ---------- Aviso de fin ---------- */
+
+/* Por encima del mini y a su altura: si el mini esta a la vista, el aviso
+   queda justo encima sin taparle los controles. */
+.endcard {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.8rem + env(safe-area-inset-bottom));
+  z-index: 6;
+  width: min(calc(100% - 2 * var(--shell-x)), 30rem);
+  padding: var(--gap-md) var(--gap-md) var(--gap-md) 1.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: rgba(12, 12, 16, 0.97);
+  transform: translateX(-50%);
+  animation: toast-in var(--dur-mid) var(--ease-out);
+}
+
+.endcard__title {
+  margin: 0 2rem var(--gap-sm) 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.endcard__title strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.endcard__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.endcard__actions button {
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+}
+
+.endcard__actions button:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.endcard__actions .endcard__main {
+  border-color: var(--bone);
+  background: var(--bone);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.endcard__actions .endcard__main:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.endcard__close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.7rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  font-size: 1.1rem;
+  color: var(--text-faint);
+}
+
+.endcard__close:hover {
+  color: var(--text);
+}
+
 /* ---------- Aviso breve ---------- */
 
 /* Por encima del mini (5) y a su misma altura de sobra: el mini mide unos
@@ -2756,6 +2853,12 @@ body.is-dragging-body * {
 
 .foot__action:hover:not(:disabled) svg {
   transform: rotate(180deg);
+}
+
+.foot__action--on {
+  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .foot__action:disabled {
