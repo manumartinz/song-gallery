@@ -2459,6 +2459,85 @@ body.is-dragging-body * {
   }
 }
 
+/* ---------- Panel de atajos ---------- */
+
+/* Mismo lenguaje que el splash: la pagina se retira detras de un velo casi
+   opaco y el texto queda solo, centrado. Por debajo del splash (10). */
+.keys {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  padding: var(--gap-lg) var(--shell-x);
+  background: rgba(7, 7, 10, 0.94);
+  animation: keys-in var(--dur-mid) var(--ease-out);
+}
+
+@keyframes keys-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.keys__inner {
+  width: min(100%, 26rem);
+}
+
+.keys__title {
+  margin: 0 0 var(--gap-lg);
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.keys__list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.keys__row {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  align-items: baseline;
+  gap: var(--gap-md);
+}
+
+.keys__row dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.keys kbd,
+.hint kbd {
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  white-space: pre;
+}
+
+.keys__close {
+  margin-top: var(--gap-xl);
+  padding: 0.5rem 1.2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+}
+
+.keys__close:hover {
+  color: var(--ink);
+  background: var(--bone);
+  border-color: var(--bone);
+}
+
 /* ---------- Aviso breve ---------- */
 
 /* Por encima del mini (5) y a su misma altura de sobra: el mini mide unos

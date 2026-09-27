@@ -17,7 +17,8 @@ por tramos, para no esperar a doscientas resoluciones antes de pintar nada.
 El volumen vive en la barra de arriba y se recuerda en el navegador. Abre a un
 sexto y va por debajo del techo del reproductor: los previews llegan
 normalizados muy arriba, así que el 100% del mando no es el 100% del audio. Con
-teclado, `+` y `-` mueven y `m` silencia. En Safari de iOS `volume` es de sólo
+teclado, `+` y `-` mueven y `m` silencia. El resto de atajos (`n`/`p` para
+siguiente y anterior, `s` al azar, `/` buscar…) salen con `?`. En Safari de iOS `volume` es de sólo
 lectura, así que allí el nivel viaja por una ganancia de Web Audio —el mismo
 grafo del ecualizador—, que de paso le devuelve el crossfade.
 

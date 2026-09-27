@@ -8,6 +8,7 @@ import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
 import TrackList from './components/TrackList.jsx';
 import MoreOnSpotify from './components/MoreOnSpotify.jsx';
+import ShortcutsPanel from './components/ShortcutsPanel.jsx';
 import SourceRail from './components/SourceRail.jsx';
 import Toast from './components/Toast.jsx';
 import Toolbar from './components/Toolbar.jsx';
@@ -527,9 +528,21 @@ export default function App() {
     setPlayWhenReady,
   });
 
+  const [showKeys, setShowKeys] = useState(false);
+  const closeKeys = useCallback(() => setShowKeys(false), []);
+
   useKeyboard((event) => {
     // No robar teclas mientras se escribe o se ajusta la barra.
     if (event.target.closest?.('input, textarea, [role="slider"]')) return;
+
+    /* `?` abre y cierra la ayuda. Con ella abierta no se mueve nada por
+       debajo: el foco esta en el panel y lo que se pulse es para el. */
+    if (event.key === '?') {
+      event.preventDefault();
+      setShowKeys((open) => !open);
+      return;
+    }
+    if (showKeys) return;
 
     // El cursor tambien se mueve por el orden visible, no por el original.
     const step = (delta) => {
@@ -586,6 +599,18 @@ export default function App() {
       case 'm':
         if (!bare(event)) break;
         toggleMute();
+        break;
+      case 'n':
+        if (!bare(event)) break;
+        skip(1);
+        break;
+      case 'p':
+        if (!bare(event)) break;
+        skip(-1);
+        break;
+      case 's':
+        if (!bare(event)) break;
+        handleRandom();
         break;
       default:
         break;
@@ -920,7 +945,9 @@ export default function App() {
             `touched`, que se pone al reproducir, y el mini solo existe si algo
             suena. Nunca coinciden. */}
         {data && !touched ? (
-          <p className="hint">Click para reproducir &middot; arrastra o usa las flechas</p>
+          <p className="hint">
+            Click para reproducir &middot; arrastra o usa las flechas &middot; <kbd>?</kbd> atajos
+          </p>
         ) : null}
       </div>
 
@@ -936,6 +963,8 @@ export default function App() {
         onNext={() => skip(1)}
         onFocusRow={() => scrollTo(playingIndex)}
       />
+
+      {showKeys ? <ShortcutsPanel onClose={closeKeys} /> : null}
 
       <Toast toast={toast} />
     </>
