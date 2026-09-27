@@ -3790,23 +3790,50 @@ body.is-now .rail {
 
 /* ---------- Lo que estoy escuchando ---------- */
 
-/* Una linea discreta bajo la cabecera: es un guiño, no una seccion. */
+/* Flota abajo a la izquierda, por encima del contenido y por debajo del mini
+   (5). Cuando el mini asoma sube lo que el mide, en vez de taparlo o de
+   quedar tapado. */
 .listening {
+  position: fixed;
+  left: var(--shell-x);
+  bottom: calc(1.2rem + env(safe-area-inset-bottom));
+  z-index: 4;
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  max-width: 100%;
-  margin-top: var(--gap-md);
-  padding: 0.35rem 0.8rem 0.35rem 0.35rem;
+  max-width: min(22rem, calc(100vw - 2 * var(--shell-x)));
+  padding: 0.35rem 0.85rem 0.35rem 0.35rem;
   border: 1px solid var(--line);
   border-radius: 999px;
+  /* Opaco, como el hint: flota sobre contenido que se desplaza. */
+  background: rgba(10, 10, 14, 0.9);
   text-decoration: none;
-  transition: border-color var(--dur-fast), background var(--dur-fast);
+  transition:
+    border-color var(--dur-fast),
+    background var(--dur-fast),
+    bottom var(--dur-mid) var(--ease-out);
+  animation: fade-up var(--dur-slow) var(--ease-out) backwards 1.2s;
+}
+
+.listening--lifted {
+  bottom: calc(6.2rem + env(safe-area-inset-bottom));
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 .listening:hover {
   border-color: var(--line-strong);
-  background: rgba(244, 241, 234, 0.04);
+  background: rgba(20, 20, 26, 0.96);
+}
+
+body.is-now .listening,
+body.is-modal .listening {
+  visibility: hidden;
 }
 
 .listening__art {

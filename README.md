@@ -182,8 +182,8 @@ por hora e IP y un campo trampa para bots. Sin Redis, el formulario no sale.
 
 ## Lo que estoy escuchando
 
-Bajo la cabecera puede salir lo que suena en mi Spotify en ese momento, o lo
-último que escuché. Es el único endpoint (`/api/now`) que habla con mi cuenta
+Abajo a la izquierda flota lo que suena en mi Spotify en ese momento, o lo
+último que escuché (sube cuando asoma el mini para no taparlo). Es el único endpoint (`/api/now`) que habla con mi cuenta
 y no con el catálogo, así que necesita un refresh token mío:
 
 1. En el dashboard de Spotify, en la app del proyecto, añadir como Redirect URI

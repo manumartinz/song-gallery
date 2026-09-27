@@ -987,6 +987,8 @@ export default function App() {
   /* Lo que queda fuera, contra el total REAL de Spotify. Suma las dos podas: la
      del server (200) y la de las pegadas (49). `totalCount` ya viajaba en la
      respuesta desde siempre y hasta ahora no lo miraba nadie. */
+  const miniShown = Boolean(currentTrack) && !activeRowVisible;
+
   const hiddenCount = Math.max(0, (data?.totalCount ?? 0) - Math.min(tracks.length, trackLimit));
 
   /* Con una busqueda puesta no se ofrece: lo que falta ahi son resultados del
@@ -1170,8 +1172,6 @@ export default function App() {
                     {isAlbum && data.label ? ` · ${data.label}` : ''}
                     {data.description ? ` — ${data.description}` : ''}
                   </p>
-
-                  <NowListening now={listening} />
                 </div>
               </div>
 
@@ -1301,7 +1301,7 @@ export default function App() {
         isPlaying={player.isPlaying}
         duration={player.duration}
         subscribePosition={player.subscribePosition}
-        shown={Boolean(currentTrack) && !activeRowVisible}
+        shown={miniShown}
         onToggle={toggle}
         onSeek={seek}
         onPrev={() => skip(-1)}
@@ -1310,6 +1310,10 @@ export default function App() {
       />
 
       {showKeys ? <ShortcutsPanel onClose={closeKeys} /> : null}
+
+      {/* Flota abajo a la izquierda; sube cuando asoma el mini para no taparlo. */}
+      {/* Con el aviso de fin a la vista se retira: ocupan la misma franja. */}
+      <NowListening now={ended && !radio ? null : listening} lifted={miniShown} />
 
       <Toast toast={toast} />
     </>

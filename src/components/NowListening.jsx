@@ -5,6 +5,9 @@ const POLL_MS = 60_000;
 /**
  * Lo que estoy escuchando (o lo último que escuché) en Spotify.
  *
+ * Flota abajo a la izquierda, fuera del flujo: es un guiño que acompaña a toda
+ * la pagina, no algo de la playlist abierta.
+ *
  * Pregunta a /api/now al montar y cada minuto mientras la pestaña está a la
  * vista. Si el endpoint no está configurado responde 204 y esto no pinta
  * nada: es un adorno, y un hueco vacío o un error aquí sobrarían.
@@ -40,12 +43,12 @@ export function useNowListening() {
   return now;
 }
 
-export default function NowListening({ now }) {
+export default function NowListening({ now, lifted = false }) {
   if (!now) return null;
 
   return (
     <a
-      className={`listening${now.playing ? ' listening--live' : ''}`}
+      className={`listening${now.playing ? ' listening--live' : ''}${lifted ? ' listening--lifted' : ''}`}
       href={now.url || undefined}
       target="_blank"
       rel="noreferrer"
