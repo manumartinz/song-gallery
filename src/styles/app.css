@@ -347,6 +347,38 @@ body.is-dragging-body * {
   list-style: none;
 }
 
+/* En la tira del flujo (por debajo de 1320 px, que es cuando deja de flotar)
+   los rotulos van en UNA fila que se desliza de lado. Con once albumes en
+   varias lineas la tira se comia casi doscientos pixeles antes de la primera
+   cancion en una tablet. La mascara difumina el borde derecho para que se lea
+   que sigue. */
+@media (max-width: 1319.98px) {
+  .rail__list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+    scrollbar-width: none;
+    mask-image: linear-gradient(90deg, #000 calc(100% - 3rem), transparent);
+  }
+
+  .rail__list::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Aire al final para que el ultimo rotulo salga de la mascara. Un hueco y
+     no padding: el padding final de un flex con scroll no siempre cuenta. */
+  .rail__list::after {
+    content: '';
+    flex: none;
+    width: 2.5rem;
+    height: 1px;
+  }
+
+  .rail__list > li {
+    flex: none;
+  }
+}
+
 /* Rótulo + aspa de una playlist pegada. El aspa usa la de `.menu__drop`, que
    solo asoma al acercarse; aqui la despierta la fila entera. */
 .rail__row {

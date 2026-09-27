@@ -75,7 +75,8 @@ Se ven como rótulos sueltos bajo un «Álbumes favoritos», sin caja, flotando 
 media altura del lado izquierdo. No empujan nada: la página queda igual que sin
 ellos y ocupan margen que de otro modo está muerto. El corte está en 1320 px,
 que es cuando ese margen da de sí; por debajo pasan al flujo, como una tira
-encima de las canciones.
+encima de las canciones, en una sola fila que se desliza de lado y se centra
+en lo que suena.
 
 En móvil no están: por debajo de 720 px van dentro del desplegable de la barra
 —que se abre como una hoja desde abajo, al alcance del pulgar—,

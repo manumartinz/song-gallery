@@ -100,6 +100,34 @@ export default function SourceRail({
     return () => node.removeEventListener('pointerdown', dismiss);
   }, [hintOn]);
 
+  /* En la tira de una sola fila (anchos medios) el rotulo encendido puede
+     quedar fuera, deslizado a la derecha: se trae a la vista al cambiar de
+     fuente o de cara. `scrollLeft` y no scrollIntoView, que ademas moveria la
+     pagina en vertical. En el riel flotante la lista no desliza y esto no hace
+     nada. */
+  useEffect(() => {
+    const center = () => {
+      const item = rootRef.current?.querySelector('.rail__pane--on .rail__item--on');
+      const list = item?.closest('.rail__list');
+      if (!item || !list || list.scrollWidth <= list.clientWidth) return;
+      // Centrado. Sin animar: al cargar la pagina el deslizamiento se cortaba a medias.
+      const itemBox = item.getBoundingClientRect();
+      const listBox = list.getBoundingClientRect();
+      const start = itemBox.left - listBox.left + list.scrollLeft;
+      list.scrollLeft = Math.max(0, start - (list.clientWidth - itemBox.width) / 2);
+    };
+    center();
+    /* Otra vez con la tipografia ya cargada: con la de reserva los rotulos son
+       mas angostos y el centrado se quedaba corto. */
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) center();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAlbumId, activePlaylistId, tab]);
+
   if (compact) return null;
 
   const showAlbums = hasAlbums && tab === 'album';
