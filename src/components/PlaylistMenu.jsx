@@ -36,6 +36,9 @@ export default function PlaylistMenu({
   albums = [],
   activeAlbumId = null,
   onSelectAlbum,
+  mine = [],
+  activeMineId = null,
+  onSelectMine,
   adding,
   setAdding,
   onSubmit,
@@ -136,12 +139,18 @@ export default function PlaylistMenu({
     setOpen(false);
   };
 
+  const chooseMine = (id) => {
+    onSelectMine(id);
+    setOpen(false);
+  };
+
   /* Lo que se esta oyendo, sea de la clase que sea: es lo que rotula el boton.
      Con un album abierto ninguna playlist esta activa, y decir "Playlists"
      mientras suena un disco es mentir sobre donde esta uno. */
   const activeAlbum = albums.find((album) => album.id === activeAlbumId);
   const activeEntry = entries.find((entry) => entry.id === activeId);
-  const current = activeAlbum?.label || activeEntry?.label || 'Playlists';
+  const activeMine = mine.find((entry) => entry.id === activeMineId);
+  const current = activeAlbum?.label || activeEntry?.label || activeMine?.label || 'Playlists';
 
   // Con el desplegable o el alta abiertos el aviso ya no pinta nada.
   const showHint = hintOn && !open && !adding;
@@ -170,6 +179,26 @@ export default function PlaylistMenu({
       {open ? (
         <div className="menu__panel">
           <span className="menu__grip" aria-hidden="true" />
+
+          {/* Lo de mi cuenta, primero y en el color de lo que suena, igual que
+              en el riel. Sin encabezado propio: con una sola entrada, el color
+              ya la separa. */}
+          {mine.map((entry) => {
+            const on = entry.id === activeMineId;
+            return (
+              <span className="menu__item" key={entry.id}>
+                <button
+                  type="button"
+                  className={`menu__tab menu__tab--mine${on ? ' menu__tab--on' : ''}`}
+                  onClick={() => chooseMine(entry.id)}
+                  aria-current={on ? 'true' : undefined}
+                >
+                  <span className="menu__label">{entry.label}</span>
+                </button>
+              </span>
+            );
+          })}
+
           {/* Los encabezados solo cuando hay dos bloques que separar: con la
               lista de albumes vacia, poner "Playlists" encima de las playlists
               no dice nada que no diga ya el boton. */}

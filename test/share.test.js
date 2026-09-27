@@ -15,6 +15,15 @@ describe('readShareParams', () => {
     expect(readShareParams(new URLSearchParams(`a=${ID}&p=${ID}`)).kind).toBe('album');
   });
 
+  it('lee las de mi cuenta por nombre, no por id', () => {
+    expect(readShareParams(new URLSearchParams(`m=top&t=${TRACK}`))).toEqual({
+      kind: 'me',
+      id: 'top',
+      trackId: TRACK,
+    });
+    expect(readShareParams(new URLSearchParams('m=cualquiera')).kind).toBeNull();
+  });
+
   it('descarta ids que no lo son', () => {
     expect(readShareParams(new URLSearchParams('p=nada&t=<script>'))).toEqual({
       kind: null,

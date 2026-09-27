@@ -15,6 +15,8 @@ import { fetchFullTracks } from './_normalize.js';
 import { rateLimited } from './_ratelimit.js';
 import { logError } from './_log.js';
 import { resolvePreview, mapWithConcurrency } from './_preview.js';
+import { mineTracks } from './mine.js';
+import { parseMineRef } from '../src/config/mine.js';
 
 const CONCURRENCY = 8;
 const MAX_LIMIT = 50;
@@ -64,8 +66,14 @@ export default async function handler(req, res) {
   // La web es publica: sin esto cualquiera puede vaciar la cuota de Spotify.
   if (rateLimited(req, res)) return;
 
-  const isAlbum = req.query?.kind === 'album';
-  const id = isAlbum ? parseAlbumId(req.query?.ref) : parsePlaylistId(req.query?.ref);
+  const kind = req.query?.kind;
+  const isAlbum = kind === 'album';
+  const id =
+    kind === 'me'
+      ? parseMineRef(req.query?.ref)
+      : isAlbum
+        ? parseAlbumId(req.query?.ref)
+        : parsePlaylistId(req.query?.ref);
   if (!id) {
     return res
       .status(400)
@@ -76,9 +84,14 @@ export default async function handler(req, res) {
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(req.query?.limit) || 40));
 
   try {
-    const tracks = isAlbum
-      ? await albumChunk(id, offset, limit)
-      : await playlistChunk(id, offset, limit);
+    /* Las de mi cuenta no se paginan en Spotify (son 50 como mucho): se piden
+       enteras y se corta el tramo. Ya traen el ISRC. */
+    const tracks =
+      kind === 'me'
+        ? (await mineTracks()).slice(offset, offset + limit)
+        : isAlbum
+          ? await albumChunk(id, offset, limit)
+          : await playlistChunk(id, offset, limit);
 
     const previews = await mapWithConcurrency(tracks, CONCURRENCY, async (track) => {
       const found = await resolvePreview({

@@ -23,7 +23,10 @@ const PREFIXES = {
      cabecera. Sin subirla, quien tuviera un álbum cacheado de la hora anterior
      lo abriría sin portada hasta que caducase. */
   album: 'song-gallery:album:v2:',
+  me: 'song-gallery:me:v1:',
 };
+
+const ROUTES = { playlist: 'playlist', album: 'album', me: 'mine' };
 
 function prefixFor(kind) {
   return PREFIXES[kind] || PREFIXES.playlist;
@@ -100,6 +103,21 @@ export function parseAlbumRef(ref) {
   return match ? match[1] : null;
 }
 
+/**
+ * Qué fuentes de mi cuenta se pueden ofrecer (hoy, 'top'). Lista vacía si
+ * no hay token o falla: es un extra, no algo que pueda romper la página.
+ */
+export async function fetchMineSources({ signal } = {}) {
+  try {
+    const response = await fetch('/api/mine', { signal });
+    if (response.status !== 200) return [];
+    const body = await response.json();
+    return Array.isArray(body.sources) ? body.sources : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Carga la fuente entera (metadata, sin previews) tirando de caché si la hay. */
 export async function fetchSource({ kind, id }, { signal } = {}) {
   if (!id) {
@@ -109,7 +127,7 @@ export async function fetchSource({ kind, id }, { signal } = {}) {
   const cached = readCache(kind, id);
   if (cached) return cached;
 
-  const route = kind === 'album' ? 'album' : 'playlist';
+  const route = ROUTES[kind] || ROUTES.playlist;
   const response = await fetch(`/api/${route}?ref=${encodeURIComponent(id)}`, { signal });
   const body = await response.json().catch(() => ({}));
 

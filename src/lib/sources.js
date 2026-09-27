@@ -8,6 +8,7 @@
  */
 import { PLAYLISTS } from '../config/playlists.js';
 import { ALBUMS } from '../config/albums.js';
+import { MINE, parseMineRef } from '../config/mine.js';
 import { parseAlbumRef, parsePlaylistRef } from './api.js';
 import { SORTS } from './search.js';
 
@@ -130,6 +131,19 @@ export function toAlbumEntries(list) {
 
 export const ALBUM_ENTRIES = toAlbumEntries(ALBUMS);
 
+/* Las de mi cuenta, todas. Cuáles se enseñan lo decide /api/mine según los
+   permisos del token; esto es sólo lo que existe. */
+export const MINE_ENTRIES = MINE.map(({ id, label }) => ({ id, label }));
+
+/* El parametro de la URL de cada clase de fuente. Son excluyentes: la URL
+   lleva siempre uno solo. Lo leen la carga, la barra de direcciones, los
+   enlaces al compartir y la canonica, y tienen que decir lo mismo. */
+export const SOURCE_PARAMS = { playlist: 'p', album: 'a', me: 'm' };
+
+export function paramFor(kind) {
+  return SOURCE_PARAMS[kind] || SOURCE_PARAMS.playlist;
+}
+
 /* Con que abre la pagina. `?a=` gana a `?p=` porque son excluyentes y la URL
    siempre lleva sólo uno de los dos; que se miren en este orden sólo importa si
    alguien construye a mano un enlace con ambos.
@@ -147,6 +161,11 @@ export function readInitialSource(
 
   const playlist = parsePlaylistRef(params.get('p'));
   if (playlist) return { kind: 'playlist', id: playlist };
+
+  /* Se abre aunque el token no tenga el permiso: entonces la carga falla con
+     su mensaje, que es mas honesto que caer en otra fuente sin decir nada. */
+  const mine = parseMineRef(params.get('m'));
+  if (mine) return { kind: 'me', id: mine };
 
   const first = [...playlists, ...custom][0];
   if (first) return { kind: 'playlist', id: first.id };

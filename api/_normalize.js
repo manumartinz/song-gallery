@@ -32,6 +32,44 @@ export function yearOf(releaseDate) {
   return Number.isFinite(year) && year > 0 ? year : null;
 }
 
+/**
+ * Una pista COMPLETA de Spotify (con ISRC y popularidad) a la forma que pinta
+ * el cliente. La usan /api/playlist y /api/mine; el album arma la suya porque
+ * sus pistas llegan simplificadas y se completan por otro lado.
+ *
+ * `primary` son los datos del artista principal (fetchArtistDetails).
+ */
+export function normalizeTrack(track, primary = {}, addedAt = null) {
+  const artists = (track.artists || []).map((artist) => ({
+    name: artist.name,
+    url: artist.external_urls?.spotify || null,
+  }));
+
+  return {
+    id: track.id,
+    title: track.name,
+    artists,
+    artistLine: artists.map((a) => a.name).join(', '),
+    album: track.album?.name || null,
+    albumUrl: track.album?.external_urls?.spotify || null,
+    albumTracks: track.album?.total_tracks ?? null,
+    art: pickArt(track.album?.images),
+    releaseDate: track.album?.release_date || null,
+    year: yearOf(track.album?.release_date),
+    durationMs: track.duration_ms ?? null,
+    isrc: track.external_ids?.isrc || null,
+    explicit: Boolean(track.explicit),
+    popularity: track.popularity ?? null,
+    trackNumber: track.track_number ?? null,
+    genre: primary.genre || null,
+    followers: primary.followers ?? null,
+    addedAt,
+    spotifyUrl: track.external_urls?.spotify || null,
+    /* previewUrl se deja AUSENTE a proposito: ausente = todavia sin
+       resolver, null = resuelto y sin preview. Los rellena /api/previews. */
+  };
+}
+
 /** Un solo GET /artists por cada 50 artistas: generos y seguidores del artista principal. */
 export async function fetchArtistDetails(artistIds, options) {
   const details = new Map();

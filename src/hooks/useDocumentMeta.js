@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { paramFor } from '../lib/sources.js';
 
 const SITE_TITLE = 'Música · Manu A. Martínez';
 
@@ -34,7 +35,7 @@ export default function useDocumentMeta({ kind, id, data }) {
     setMeta('meta[name="description"]', 'content', text);
 
     const canonical = new URL('/', location.origin);
-    canonical.searchParams.set(isAlbum ? 'a' : 'p', id);
+    canonical.searchParams.set(paramFor(kind), id);
     setMeta('link[rel="canonical"]', 'href', canonical.toString());
   }, [kind, id, name, owner, description]);
 }

@@ -9,7 +9,7 @@
  * antes de ver una sola fila.
  */
 import { parsePlaylistId, spotifyGet, SpotifyError } from './_spotify.js';
-import { pickArt, yearOf, fetchArtistDetails } from './_normalize.js';
+import { pickArt, fetchArtistDetails, normalizeTrack } from './_normalize.js';
 import { rateLimited } from './_ratelimit.js';
 import { logError } from './_log.js';
 
@@ -66,38 +66,13 @@ export default async function handler(req, res) {
 
     const artistDetails = await fetchArtistDetails(entries.map((e) => e.track.artists?.[0]?.id));
 
-    const tracks = entries.map((entry) => {
-      const track = entry.track;
-      const artists = (track.artists || []).map((artist) => ({
-        name: artist.name,
-        url: artist.external_urls?.spotify || null,
-      }));
-      const primary = artistDetails.get(track.artists?.[0]?.id) || {};
-
-      return {
-        id: track.id,
-        title: track.name,
-        artists,
-        artistLine: artists.map((a) => a.name).join(', '),
-        album: track.album?.name || null,
-        albumUrl: track.album?.external_urls?.spotify || null,
-        albumTracks: track.album?.total_tracks ?? null,
-        art: pickArt(track.album?.images),
-        releaseDate: track.album?.release_date || null,
-        year: yearOf(track.album?.release_date),
-        durationMs: track.duration_ms ?? null,
-        isrc: track.external_ids?.isrc || null,
-        explicit: Boolean(track.explicit),
-        popularity: track.popularity ?? null,
-        trackNumber: track.track_number ?? null,
-        genre: primary.genre || null,
-        followers: primary.followers ?? null,
-        addedAt: entry.added_at || null,
-        spotifyUrl: track.external_urls?.spotify || null,
-        /* previewUrl se deja AUSENTE a proposito: ausente = todavia sin
-           resolver, null = resuelto y sin preview. Los rellena /api/previews. */
-      };
-    });
+    const tracks = entries.map((entry) =>
+      normalizeTrack(
+        entry.track,
+        artistDetails.get(entry.track.artists?.[0]?.id),
+        entry.added_at || null,
+      ),
+    );
 
     // Cache en el edge de Vercel: las visitas repetidas ni tocan Spotify.
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');

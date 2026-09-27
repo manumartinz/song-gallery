@@ -445,6 +445,21 @@ body.is-dragging-body * {
   color: var(--accent);
 }
 
+/* "mi mes" va siempre en el color del fondo (`--tint`, lo pone App), abierta o
+   no; lo que la distingue cuando está abierta es el peso. La transición es la
+   misma que la del fondo al cambiar de canción, para que roten juntos. */
+.rail__item--mine,
+/* Doble clase: `.menu__tab` se declara mas abajo y ganaria por orden. */
+.menu__tab.menu__tab--mine {
+  color: var(--tint, var(--accent));
+  transition: color var(--dur-slow) var(--ease-out);
+}
+
+.rail__item--mine.rail__item--on,
+.menu__tab--mine.menu__tab--on {
+  font-weight: 600;
+}
+
 /* Aviso de primera visita. Mismo globo que el del menu de playlists —opaco,
    redondo y con su punta—, pero colgando de los rotulos. En la tira del flujo
    cae debajo, con la punta hacia arriba. */

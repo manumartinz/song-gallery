@@ -10,6 +10,7 @@
 import { spotifyGet, parseAlbumId, parsePlaylistId, NOT_FOUND } from './_spotify.js';
 import { pickArt } from './_normalize.js';
 import { noteFor } from '../src/config/notes.js';
+import { mineById, parseMineRef } from '../src/config/mine.js';
 
 export const SITE = 'Manu A. Martínez';
 export const SITE_TITLE = `Música · ${SITE}`;
@@ -18,20 +19,23 @@ export const SITE_DESCRIPTION =
 
 const TRACK_ID = /^[A-Za-z0-9]{22}$/;
 
-/** Los parámetros de un enlace de la web: ?p=, ?a= y ?t=. */
+/** Los parámetros de un enlace de la web: ?p=, ?a=, ?m= y ?t=. */
 export function readShareParams(searchParams) {
   const album = parseAlbumId(searchParams.get('a'));
   const playlist = album ? null : parsePlaylistId(searchParams.get('p'));
+  const mine = album || playlist ? null : parseMineRef(searchParams.get('m'));
   const t = searchParams.get('t');
   return {
-    kind: album ? 'album' : playlist ? 'playlist' : null,
-    id: album || playlist,
+    kind: album ? 'album' : playlist ? 'playlist' : mine ? 'me' : null,
+    id: album || playlist || mine,
     trackId: t && TRACK_ID.test(t) ? t : null,
   };
 }
 
 async function sourceName({ kind, id }) {
   if (!id) return null;
+  // Las de mi cuenta tienen nombre fijo y no hay a quién preguntarle por él.
+  if (kind === 'me') return { name: mineById(id).name, owner: null, art: null };
   try {
     if (kind === 'album') {
       const album = await spotifyGet(`/albums/${id}`, { notFound: NOT_FOUND.album });
@@ -87,6 +91,12 @@ export async function describeShare(params) {
 
   const source = await sourceName(params);
   if (!source) return fallback;
+
+  /* Sin portada propia ni nada que la distinga de la web: la tarjeta es la de
+     siempre con el título de la fuente. */
+  if (params.kind === 'me') {
+    return { ...fallback, title: `${source.name} · ${SITE}`, sourceName: source.name };
+  }
 
   const isAlbum = params.kind === 'album';
   return {

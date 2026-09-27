@@ -3,7 +3,7 @@
  *
  * Lo que estoy escuchando en Spotify ahora mismo, o lo último que escuché.
  *
- * Es el único endpoint que habla con MI cuenta y no con el catálogo: usa un
+ * Habla con MI cuenta y no con el catálogo (como /api/mine): usa un
  * refresh token mío (SPOTIFY_REFRESH_TOKEN) con los permisos
  * user-read-currently-playing y user-read-recently-played. Se saca una vez con
  * `npm run spotify-token`. Sin él, responde 204 y la web no enseña nada.
@@ -13,33 +13,9 @@
  */
 import { pickArt } from './_normalize.js';
 import { logError } from './_log.js';
+import { userConfigured, userToken } from './_user.js';
 
-const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const API = 'https://api.spotify.com/v1/me/player';
-
-let cached = null; // { value, expiresAt }
-
-async function userToken() {
-  if (cached && cached.expiresAt > Date.now()) return cached.value;
-
-  const { SPOTIFY_CLIENT_ID: id, SPOTIFY_CLIENT_SECRET: secret } = process.env;
-  const response = await fetch(TOKEN_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${btoa(`${id}:${secret}`)}`,
-    },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: process.env.SPOTIFY_REFRESH_TOKEN,
-    }),
-  });
-  if (!response.ok) throw new Error(`token ${response.status}`);
-
-  const json = await response.json();
-  cached = { value: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 - 30_000 };
-  return cached.value;
-}
 
 /** Lo único que sale de aquí. Los episodios de podcast no cuentan. */
 export function toNow(track, playing) {
@@ -57,7 +33,7 @@ export function toNow(track, playing) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Método no permitido.' });
 
-  if (!process.env.SPOTIFY_REFRESH_TOKEN) {
+  if (!userConfigured()) {
     res.statusCode = 204;
     return res.end();
   }

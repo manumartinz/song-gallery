@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_CUSTOM,
   mergePreviews,
+  paramFor,
   readInitialSource,
   toAlbumEntries,
   toCustomEntries,
@@ -75,6 +76,15 @@ describe('toEntries / toCustomEntries / toAlbumEntries', () => {
   });
 });
 
+describe('paramFor', () => {
+  it('un parametro distinto por clase de fuente', () => {
+    expect(paramFor('playlist')).toBe('p');
+    expect(paramFor('album')).toBe('a');
+    expect(paramFor('me')).toBe('m');
+    expect(paramFor(undefined)).toBe('p');
+  });
+});
+
 describe('readInitialSource', () => {
   const config = {
     playlists: [{ id: A }],
@@ -88,6 +98,15 @@ describe('readInitialSource', () => {
 
   it('?p= abre esa playlist aunque no este en la config', () => {
     expect(readInitialSource(`?p=${B}`, config)).toEqual({ kind: 'playlist', id: B });
+  });
+
+  it('?m= abre una de mi cuenta, y solo las que existen', () => {
+    expect(readInitialSource('?m=top', config)).toEqual({ kind: 'me', id: 'top' });
+    expect(readInitialSource('?m=recent', config)).toEqual({ kind: 'playlist', id: A });
+  });
+
+  it('?p= gana a ?m=', () => {
+    expect(readInitialSource(`?m=top&p=${B}`, config)).toEqual({ kind: 'playlist', id: B });
   });
 
   it('sin parametros abre la primera playlist', () => {

@@ -3,11 +3,12 @@
  * misma fuente con la ficha de esa cancion desplegada (el `?t=` que ya
  * entendia la pagina), que es lo que uno quiere mandar: "escucha esta, aqui".
  */
+import { paramFor } from './sources.js';
 
 /** Enlace canonico a una cancion dentro de su playlist o album. */
 export function trackUrl({ kind, id }, trackId) {
   const url = new URL(location.origin);
-  url.searchParams.set(kind === 'album' ? 'a' : 'p', id);
+  url.searchParams.set(paramFor(kind), id);
   if (trackId) url.searchParams.set('t', trackId);
   return url.toString();
 }
@@ -94,7 +95,7 @@ const storyFiles = new Map(); // url -> File, las ya dibujadas en esta visita
 
 export async function shareStory({ kind, id }, track) {
   const url = new URL('/api/story', location.origin);
-  url.searchParams.set(kind === 'album' ? 'a' : 'p', id);
+  url.searchParams.set(paramFor(kind), id);
   url.searchParams.set('t', track.id);
   const accent = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent'));
   if (accent) url.searchParams.set('c', accent);

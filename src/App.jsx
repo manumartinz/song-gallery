@@ -20,7 +20,7 @@ import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
 import { EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
-import { dropPlaylistCache, parsePlaylistRef } from './lib/api.js';
+import { dropPlaylistCache, fetchMineSources, parsePlaylistRef } from './lib/api.js';
 import { tag, trackEvent } from './lib/clarity.js';
 import isHardReload from './lib/hardReload.js';
 import { facetOptions, hasFacets, makeFacetFilter, NO_FACETS } from './lib/facets.js';
@@ -32,6 +32,8 @@ import {
   DEFAULT_SORTS,
   FIXED_ENTRIES,
   MAX_CUSTOM,
+  MINE_ENTRIES,
+  paramFor,
   persistCustom,
   readCustomEntries,
   readInitialSource,
@@ -62,7 +64,8 @@ function bare(event) {
   return !event.metaKey && !event.ctrlKey && !event.altKey;
 }
 
-/* Criterios que un album no puede ofrecer. Fuera del componente para que sea
+/* Criterios que un album —o una fuente de mi cuenta, sin fecha de añadido— no
+   puede ofrecer. Fuera del componente para que sea
    siempre el mismo array y no rompa el memo de la barra de herramientas. */
 const SORTS_OFF_ALBUM = ['added'];
 
@@ -97,6 +100,22 @@ export default function App() {
   const currentId = current.id;
   const currentKind = current.kind;
   const isAlbum = currentKind === 'album';
+  const isMine = currentKind === 'me';
+
+  /* Las de mi cuenta que el token deja ofrecer. Empieza vacía: el menú las
+     suma cuando contesta /api/mine, y sin token no llegan nunca. */
+  const [mineIds, setMineIds] = useState([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchMineSources({ signal: controller.signal }).then((ids) => {
+      if (!controller.signal.aborted) setMineIds(ids);
+    });
+    return () => controller.abort();
+  }, []);
+  const mineEntries = useMemo(
+    () => MINE_ENTRIES.filter((entry) => mineIds.includes(entry.id)),
+    [mineIds],
+  );
 
   const [view, setView] = useState(() => {
     try {
@@ -387,7 +406,7 @@ export default function App() {
 
   useUrlSync({
     id: currentId,
-    isAlbum,
+    kind: currentKind,
     trackId: currentTrack?.id ?? null,
     tracks,
     onDeepLink: openDeepLink,
@@ -623,7 +642,7 @@ export default function App() {
     async (score, total) => {
       trackEvent('quiz_share');
       const url = new URL(location.origin);
-      url.searchParams.set(isAlbum ? 'a' : 'p', currentId);
+      url.searchParams.set(paramFor(currentKind), currentId);
       url.searchParams.set('juego', '');
       const text = `Reconocí ${score} de ${total} canciones de «${data?.name}». ¿Cuántas reconocés vos?`;
       const link = url.toString().replace('juego=', 'juego');
@@ -635,7 +654,7 @@ export default function App() {
       });
       if (result === 'copied') notify('Resultado copiado');
     },
-    [isAlbum, currentId, data?.name, notify],
+    [currentKind, currentId, data?.name, notify],
   );
 
   /* ---------- Fin de la fuente y radio ---------- */
@@ -888,6 +907,10 @@ export default function App() {
     trackEvent('source_change');
     setCurrent({ kind: 'album', id });
   }, []);
+  const selectMine = useCallback((id) => {
+    trackEvent('source_change');
+    setCurrent({ kind: 'me', id });
+  }, []);
 
   /* La etiqueta va atada a `current` y no a los clicks: asi tambien la reciben
      la fuente de un enlace compartido y la que queda al quitar una pegada. */
@@ -982,6 +1005,12 @@ export default function App() {
      que suena, asi que no es peso nuevo. */
   const backdropSource =
     currentTrack?.art?.md || currentTrack?.art?.lg || currentTrack?.art?.sm || data?.image || null;
+
+  /* El color de "mi mes" en el menú: el del fondo, no el acento. El acento de
+     una playlist espera a que suene algo y hasta entonces es blanco; el fondo
+     ya enseña la portada de la fuente desde que abre, así que "mi mes" tiene
+     color siempre y rota con lo que haya detrás. */
+  useAccentColor(backdropSource, '--tint');
   const playableCount = tracks.reduce((n, _, index) => n + (isPlayable(index) ? 1 : 0), 0);
 
   // El <h1> salio de pantalla y su titulo pasa a la barra superior.
@@ -1053,13 +1082,16 @@ export default function App() {
               entries={entries}
               /* Con un album abierto no hay pestaña encendida, y esta bien asi:
                  ninguna de esas playlists es lo que se esta escuchando. */
-              activeId={isAlbum ? null : currentId}
+              activeId={currentKind === 'playlist' ? currentId : null}
               onSelect={(entry) => selectPlaylist(entry.id)}
               /* Sólo pinta algo en móvil, donde el desplegable lleva las dos
                  listas; en ancho las dos van en el riel de la izquierda. */
               albums={ALBUM_ENTRIES}
               activeAlbumId={isAlbum ? currentId : null}
               onSelectAlbum={selectAlbum}
+              mine={mineEntries}
+              activeMineId={isMine ? currentId : null}
+              onSelectMine={selectMine}
               adding={adding}
               setAdding={setAdding}
               onSubmit={handleAddPlaylist}
@@ -1084,12 +1116,15 @@ export default function App() {
 
         <SourceRail
           entries={entries}
-          activePlaylistId={isAlbum ? null : currentId}
+          activePlaylistId={currentKind === 'playlist' ? currentId : null}
           onSelectPlaylist={selectPlaylist}
           onRemove={handleRemovePlaylist}
           albums={ALBUM_ENTRIES}
           activeAlbumId={isAlbum ? currentId : null}
           onSelectAlbum={selectAlbum}
+          mine={mineEntries}
+          activeMineId={isMine ? currentId : null}
+          onSelectMine={selectMine}
           activeKind={currentKind}
           adding={adding}
           setAdding={setAdding}
@@ -1126,7 +1161,7 @@ export default function App() {
 
                 <div className="intro__text">
                   <p className="intro__eyebrow">
-                    {isAlbum ? 'Álbum' : 'Playlist'}
+                    {isAlbum ? 'Álbum' : isMine ? 'De mi Spotify' : 'Playlist'}
                     {data.owner ? ` de ${data.owner}` : ''}
                   </p>
 
@@ -1193,7 +1228,7 @@ export default function App() {
                 /* Lo que se puede llegar a ver, no lo que se tiene cargado: en
                    una pegada decir "3 de 200" cuando el maximo son 49 miente. */
                 total={Math.min(tracks.length, trackLimit)}
-                omit={isAlbum ? SORTS_OFF_ALBUM : undefined}
+                omit={isAlbum || isMine ? SORTS_OFF_ALBUM : undefined}
                 facetChoices={facetChoices}
                 facets={facets}
                 onFacets={handleFacets}

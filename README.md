@@ -210,10 +210,18 @@ Es lo único que escribe texto libre de desconocidos, así que va con capas
 - La misma canción dos veces en un día (con otro `?si=` u otra ortografía)
   cuenta una.
 
+Las que me gustan van a una playlist pública de Spotify con
+`npm run recs add <número>` (el número es el que imprime `npm run recs`). Si la
+recomendación trae link, va esa canción; si es texto, se busca en Spotify y
+pregunta antes de agregar, y si el buscador se equivoca se le pasa el link
+correcto: `npm run recs add 3 <link>`. Nada entra solo. Necesita
+`SPOTIFY_RECS_PLAYLIST` (la playlist, creada a mano una vez) y el refresh token
+de abajo con el permiso `playlist-modify-public`.
+
 ## Lo que estoy escuchando
 
 Abajo a la izquierda flota lo que suena en mi Spotify en ese momento, o lo
-último que escuché (sube cuando asoma el mini para no taparlo). Es el único endpoint (`/api/now`) que habla con mi cuenta
+último que escuché (sube cuando asoma el mini para no taparlo). Es un endpoint (`/api/now`) que habla con mi cuenta
 y no con el catálogo, así que necesita un refresh token mío:
 
 1. En el dashboard de Spotify, en la app del proyecto, añadir como Redirect URI
@@ -223,6 +231,15 @@ y no con el catálogo, así que necesita un refresh token mío:
 
 Sin la variable el endpoint responde 204 y la web no enseña nada. Sólo sale
 título, artista, portada y enlace: nada del dispositivo ni del contexto.
+
+## En mi Spotify
+
+El mismo token alimenta **mi mes**, una fuente que se arma sola con lo más
+escuchado en las últimas cuatro semanas (`/api/mine`, `?m=top` en la URL). Va
+en la cara de playlists, primero y en el color de la canción que suena.
+
+Pide el permiso `user-top-read`, y sólo sale en el menú si el token lo tiene:
+con uno sacado antes, hay que volver a correr `npm run spotify-token`.
 
 ## Desplegar
 

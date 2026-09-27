@@ -32,6 +32,9 @@ export default function SourceRail({
   albums,
   activeAlbumId,
   onSelectAlbum,
+  mine = [],
+  activeMineId = null,
+  onSelectMine,
   activeKind,
   adding,
   setAdding,
@@ -126,7 +129,7 @@ export default function SourceRail({
     return () => {
       cancelled = true;
     };
-  }, [activeAlbumId, activePlaylistId, tab]);
+  }, [activeAlbumId, activePlaylistId, activeMineId, tab]);
 
   if (compact) return null;
 
@@ -195,6 +198,26 @@ export default function SourceRail({
         <div {...paneProps(!showAlbums)}>
           <p className="rail__eyebrow">Mis playlists favoritas</p>
           <ul className="rail__list">
+            {/* Las de mi cuenta van primero y en el color de lo que suena: son
+                lo más vivo de la lista, lo único que cambia sin que yo toque
+                nada. En la MISMA lista y no en otra: en la tira de anchos
+                medios cada lista es una fila, y una segunda la haría crecer. */}
+            {mine.map((entry) => {
+              const on = entry.id === activeMineId;
+              return (
+                <li key={entry.id}>
+                  <button
+                    type="button"
+                    className={`rail__item rail__item--mine${on ? ' rail__item--on' : ''}`}
+                    onClick={() => onSelectMine(entry.id)}
+                    aria-current={on ? 'true' : undefined}
+                  >
+                    {entry.label}
+                  </button>
+                </li>
+              );
+            })}
+
             {entries.map((entry) => {
               /* Las pegadas nacen sin nombre y lo reciben cuando contesta
                  Spotify. Mientras tanto hace falta algo que poner. */

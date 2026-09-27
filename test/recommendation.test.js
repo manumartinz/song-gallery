@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { checkRecommendation, normalizeSong } from '../api/_recommendation.js';
+import {
+  checkRecommendation,
+  normalizeSong,
+  searchQueryFor,
+  trackIdFrom,
+} from '../api/_recommendation.js';
 
 const valid = {
   song: 'https://open.spotify.com/track/52p6Vadc9zlHxihhrlfhPS?si=abc',
@@ -52,5 +57,27 @@ describe('normalizeSong', () => {
       normalizeSong('https://open.spotify.com/track/abc?si=2'),
     );
     expect(normalizeSong('Canción — Artista')).toBe(normalizeSong('cancion artista'));
+  });
+});
+
+describe('trackIdFrom', () => {
+  it('saca el id de un link o un URI de cancion', () => {
+    expect(trackIdFrom(valid.song)).toBe('52p6Vadc9zlHxihhrlfhPS');
+    expect(trackIdFrom('mirá spotify:track:52p6Vadc9zlHxihhrlfhPS')).toBe('52p6Vadc9zlHxihhrlfhPS');
+  });
+
+  it('un album o un texto no son una cancion', () => {
+    expect(trackIdFrom('https://open.spotify.com/album/3SUEJULSGgBDG1j4GQhfYY')).toBeNull();
+    expect(trackIdFrom('Berghain — Rosalía')).toBeNull();
+    expect(trackIdFrom(undefined)).toBeNull();
+  });
+});
+
+describe('searchQueryFor', () => {
+  it('quita rayas, comillas y links', () => {
+    expect(searchQueryFor('«Berghain» — Rosalía')).toBe('Berghain Rosalía');
+    expect(searchQueryFor('Motion Sickness - Phoebe Bridgers https://x.co/y')).toBe(
+      'Motion Sickness Phoebe Bridgers',
+    );
   });
 });

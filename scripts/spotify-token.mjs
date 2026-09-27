@@ -2,7 +2,8 @@
  * npm run spotify-token
  *
  * Saca el refresh token de TU cuenta de Spotify para /api/now (lo que estás
- * escuchando). Se corre una vez, en local:
+ * escuchando), /api/mine ("mi mes") y `npm run recs add`. Se
+ * corre una vez, en local, y otra cada vez que se sumen permisos:
  *
  *   1. En developer.spotify.com/dashboard, en la app de este proyecto, añadí
  *      como Redirect URI:  http://127.0.0.1:8888/callback
@@ -41,7 +42,14 @@ authorize.search = new URLSearchParams({
   client_id: id,
   response_type: 'code',
   redirect_uri: REDIRECT,
-  scope: 'user-read-currently-playing user-read-recently-played',
+  /* Leer: lo que suena y lo último (/api/now) y lo más escuchado
+     ("mi mes"). Escribir: la playlist de recomendaciones (npm run recs add). */
+  scope: [
+    'user-read-currently-playing',
+    'user-read-recently-played',
+    'user-top-read',
+    'playlist-modify-public',
+  ].join(' '),
   state,
 });
 

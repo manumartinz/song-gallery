@@ -37,6 +37,25 @@ export function normalizeSong(song) {
     .slice(0, 120);
 }
 
+/** El id de canción de un link de Spotify pegado en el texto, o null. */
+export function trackIdFrom(text) {
+  const match = String(text ?? '').match(/track[/:]([A-Za-z0-9]{22})/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Lo que se le pregunta al buscador de Spotify por una recomendación escrita a
+ * mano ("Canción — Artista", "canción de artista"...): sin links ni rayas, que
+ * el buscador lee como parte del título.
+ */
+export function searchQueryFor(text) {
+  return String(text ?? '')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[—–\-|·"“”«»]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function checkRecommendation(body = {}) {
   // Trampas para bots: el campo invisible y la velocidad de relleno.
   if (body.website) return { ok: false, silent: true };
