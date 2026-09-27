@@ -169,6 +169,15 @@ Vercel se conecta desde Storage → Marketplace → Upstash, que crea
 204 y los botones no aparecen. No hay cuentas: cada navegador recuerda lo que
 marcó, y un límite por IP guardado en el propio Redis frena el abuso.
 
+## Recomendame una
+
+Al pie, debajo de la nota que invita a recomendar, hay un formulario para que
+quien escucha me deje una canción (un link o «canción — artista»), su nombre y
+algo más si quiere. Va al mismo Redis que las reacciones, a una lista `recs`
+con las 2000 más recientes, y se leen con `npm run recs` (toma las variables
+de `.env.local`; en Vercel se bajan con `vercel env pull`). Límite de cinco
+por hora e IP y un campo trampa para bots. Sin Redis, el formulario no sale.
+
 ## Lo que estoy escuchando
 
 Bajo la cabecera puede salir lo que suena en mi Spotify en ese momento, o lo

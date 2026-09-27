@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "spotify-token": "node scripts/spotify-token.mjs"
+    "spotify-token": "node scripts/spotify-token.mjs",
+    "recs": "node scripts/recs.mjs"
   },
   "dependencies": {
     "@microsoft/clarity": "^1.0.2",

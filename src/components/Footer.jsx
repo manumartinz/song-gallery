@@ -1,4 +1,5 @@
 import useInView from '../hooks/useInView.js';
+import RecommendForm from './RecommendForm.jsx';
 
 /**
  * Cierre al final del scroll. No es una barra fija: se llega a el bajando.
@@ -73,6 +74,8 @@ export default function Footer({
         Si llegaste hasta acá, escribime. Me encantaría saber qué te pareció, o que la próxima
         canción me la recomiendes vos.
       </p>
+
+      <RecommendForm />
 
       <div className="foot__social">
         <a href="https://www.instagram.com/manumartinezx/" target="_blank" rel="noreferrer">

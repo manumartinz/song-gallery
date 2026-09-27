@@ -3890,3 +3890,91 @@ body.is-now .rail {
   font-variant-numeric: tabular-nums;
   opacity: 0.7;
 }
+
+/* ---------- Recomendame una ---------- */
+
+/* Mismo ancho de lectura que la nota del pie, justo debajo de ella: es la
+   respuesta a lo que la nota pide. */
+.rec {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap-sm);
+  max-width: 34rem;
+  margin: var(--gap-lg) auto var(--gap-lg);
+  text-align: left;
+}
+
+.rec__field {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.rec__field--song,
+.rec__field--wide {
+  grid-column: 1 / -1;
+}
+
+.rec__field span {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.rec input,
+.rec textarea {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: rgba(7, 7, 10, 0.5);
+  font: inherit;
+  font-size: 0.86rem;
+  color: var(--text);
+  resize: vertical;
+  transition: border-color var(--dur-fast);
+}
+
+.rec input::placeholder,
+.rec textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.rec input:focus,
+.rec textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.rec__trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.rec__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.78rem;
+  color: #f08a7e;
+}
+
+.rec__send {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+.rec__thanks {
+  margin: var(--gap-lg) 0;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .rec {
+    grid-template-columns: 1fr;
+  }
+}
