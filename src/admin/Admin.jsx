@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import useInView from '../hooks/useInView.js';
 
 /**
  * El panel donde reviso lo que me recomiendan: lo nuevo, lo que agregué, lo
@@ -268,16 +269,29 @@ function RecCard({ rec, act, guard, playing, onPreview }) {
   const [query, setQuery] = useState('');
   const [chosen, setChosen] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [searching, setSearching] = useState(false);
+  /* Busca sola al asomar en pantalla (con un margen, para que ya esté al
+     llegar), y no todas de golpe: cada búsqueda son varias peticiones a
+     Spotify y a Deezer, y la bandeja puede tener cientos. */
+  const [cardRef, inView] = useInView({ rootMargin: '300px 0px' });
 
-  const search = async (q = '') => {
-    setBusy(true);
-    const data = await guard(() => call('resolve', { params: { key: rec.key, q } }));
-    setBusy(false);
-    if (!data) return;
-    setResult(data);
-    // Con un link hay una sola opción: queda elegida.
-    setChosen(data.candidates.length === 1 || data.exact ? data.candidates[0]?.id || null : null);
-  };
+  const search = useCallback(
+    async (q = '') => {
+      setSearching(true);
+      const data = await guard(() => call('resolve', { params: { key: rec.key, q } }));
+      setSearching(false);
+      if (!data) return;
+      setResult(data);
+      /* Queda elegida la primera: con un link es la única, y con una búsqueda
+         es la más probable. Se ve marcada, y se cambia con un toque. */
+      setChosen(data.candidates[0]?.id || null);
+    },
+    [guard, rec.key],
+  );
+
+  useEffect(() => {
+    if (inView && rec.state === 'new') search();
+  }, [inView, rec.state, search]);
 
   const run = async (op, body) => {
     setBusy(true);
@@ -286,7 +300,7 @@ function RecCard({ rec, act, guard, playing, onPreview }) {
   };
 
   return (
-    <li className="adm__card">
+    <li className="adm__card" ref={cardRef}>
       <div className="adm__meta">
         <strong>{rec.name}</strong>
         <span>{formatDate(rec.at)}</span>
@@ -341,11 +355,11 @@ function RecCard({ rec, act, guard, playing, onPreview }) {
               className="adm__input"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={result ? 'Otra búsqueda o link de Spotify' : 'Opcional: texto o link'}
+              placeholder="¿No es esa? Otra búsqueda o link de Spotify"
               aria-label="Buscar otra canción"
             />
-            <button type="submit" className="adm__btn" disabled={busy}>
-              {result ? 'Buscar' : 'Ver canción'}
+            <button type="submit" className="adm__btn" disabled={searching || !query.trim()}>
+              Buscar
             </button>
           </form>
 
@@ -353,10 +367,16 @@ function RecCard({ rec, act, guard, playing, onPreview }) {
             <button
               type="button"
               className="adm__btn adm__btn--main"
-              disabled={busy || !chosen}
+              disabled={busy || searching || !chosen}
               onClick={() => run('add', { trackId: chosen })}
             >
-              Agregar a la playlist
+              {searching
+                ? 'Buscando…'
+                : result && !result.candidates.length
+                  ? 'Sin resultados'
+                  : result && !chosen
+                    ? 'Elegí una canción'
+                    : 'Agregar a la playlist'}
             </button>
             <button type="button" className="adm__btn" disabled={busy} onClick={() => run('discard')}>
               Descartar
