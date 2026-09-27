@@ -112,13 +112,15 @@ export function sitemap(lastmod = new Date().toISOString().slice(0, 10)) {
 export function robots() {
   /* Las imagenes de las tarjetas si: las piden los rastreadores al armar la
      vista previa de un enlace. */
-  return `User-agent: *\nAllow: /\nAllow: /api/og\nAllow: /api/story\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`;
+  return `User-agent: *\nAllow: /\nAllow: /api/og\nAllow: /api/story\nDisallow: /api/\nDisallow: /admin\n\nSitemap: ${SITE}/sitemap.xml\n`;
 }
 
 export default function seo() {
   return {
     name: 'song-gallery-seo',
-    transformIndexHtml(html) {
+    transformIndexHtml(html, ctx) {
+      // Solo la galería: el panel no tiene nada que contarle a un buscador.
+      if (/admin\.html$/.test(ctx?.filename || ctx?.path || '')) return html;
       return html
         .replace(
           '</head>',

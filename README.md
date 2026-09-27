@@ -210,13 +210,33 @@ Es lo único que escribe texto libre de desconocidos, así que va con capas
 - La misma canción dos veces en un día (con otro `?si=` u otra ortografía)
   cuenta una.
 
-Las que me gustan van a una playlist pública de Spotify con
-`npm run recs add <número>` (el número es el que imprime `npm run recs`). Si la
-recomendación trae link, va esa canción; si es texto, se busca en Spotify y
-pregunta antes de agregar, y si el buscador se equivoca se le pasa el link
-correcto: `npm run recs add 3 <link>`. Nada entra solo. Necesita
-`SPOTIFY_RECS_PLAYLIST` (la playlist, creada a mano una vez) y el refresh token
-de abajo con el permiso `playlist-modify-public`.
+Las que me gustan van a una playlist pública de Spotify, y nada entra solo. Se
+decide en **`/admin`**, un panel con contraseña que anda también en el celular:
+
+- **Nuevas / Agregadas / Descartadas**: cada recomendación con su nombre,
+  mensaje y la canción resuelta. Si trae link de Spotify va esa; si es texto se
+  busca, y si es un video de YouTube se busca por su título. Se elige entre los
+  candidatos (con preview para escuchar), o se pega el link correcto, y se
+  agrega o se descarta. Descartar no borra: se puede restaurar.
+- **Playlist**: lo que ya está adentro, con quién lo recomendó, para mover o
+  quitar. Quitar una devuelve su recomendación a «Nuevas».
+
+Todo pasa por una sola función, `api/admin.js` (el plan de Vercel limita
+cuántas hay por deploy), con la lógica en `api/_recs.js`. La sesión es una
+cookie firmada con una clave derivada de `ADMIN_PASSWORD`: cambiar la
+contraseña cierra todas. La cookie solo viaja a `/api/admin`, es `HttpOnly` y
+`SameSite=Strict`, y el login admite 5 intentos cada 15 minutos por IP. Sin
+`ADMIN_PASSWORD` o sin Redis, el panel no existe. La página tiene su propio
+bundle (`admin.html`): quien visita la galería no la descarga.
+
+Lo mismo desde la terminal: `npm run recs add <número>` (el que imprime
+`npm run recs`), o `npm run recs add 3 <link>` si el buscador se equivoca.
+Comparten los datos con el panel.
+
+Necesita `SPOTIFY_RECS_PLAYLIST` (la playlist, creada a mano una vez) y el
+refresh token de abajo con `playlist-modify-public` y `playlist-modify-private`:
+las playlists creadas desde las apps nuevas de Spotify piden el segundo aunque
+sean públicas.
 
 ## Lo que estoy escuchando
 

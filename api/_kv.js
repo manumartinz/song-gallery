@@ -54,6 +54,21 @@ export function clientIp(req) {
 }
 
 /**
+ * Solo desde la propia web. Los navegadores mandan Origin en todo POST. Lo
+ * usan los dos endpoints que escriben: las recomendaciones y el panel.
+ */
+export function sameOrigin(req) {
+  const origin = req.headers?.origin;
+  const host = req.headers?.['x-forwarded-host'] || req.headers?.host;
+  if (!origin || !host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Límite por IP guardado en el propio Redis, compartido entre instancias (el de
  * _ratelimit.js vive en memoria y vale para frenar curiosos, no para proteger
  * algo que escribe). Devuelve true si hay que rechazar.

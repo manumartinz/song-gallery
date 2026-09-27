@@ -37,6 +37,20 @@ export function normalizeSong(song) {
     .slice(0, 120);
 }
 
+const newId = () =>
+  Date.now().toString(36) + Math.random().toString(36).slice(2, 8).padEnd(6, '0');
+
+/** Con qué se identifica una recomendación guardada: su id, o su fecha si es vieja. */
+export const recKey = (rec) => rec?.id || rec?.at || null;
+
+/** El primer link de YouTube del texto (youtube.com o youtu.be), o null. */
+export function youtubeUrlFrom(text) {
+  const match = String(text ?? '').match(
+    /https?:\/\/(?:www\.|m\.|music\.)?(?:youtube\.com\/(?:watch|shorts\/)|youtu\.be\/)\S+/i,
+  );
+  return match ? match[0] : null;
+}
+
 /** El id de canción de un link de Spotify pegado en el texto, o null. */
 export function trackIdFrom(text) {
   const match = String(text ?? '').match(/track[/:]([A-Za-z0-9]{22})/);
@@ -80,7 +94,10 @@ export function checkRecommendation(body = {}) {
 
   return {
     ok: true,
-    entry: { song, name, message, at: new Date().toISOString() },
+    /* `id` es con lo que el panel marca la recomendación como agregada o
+       descartada. Las anteriores no lo tienen y se reconocen por `at`. No es
+       un secreto, solo tiene que no repetirse. */
+    entry: { id: newId(), song, name, message, at: new Date().toISOString() },
     fingerprint: normalizeSong(song),
   };
 }

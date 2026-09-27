@@ -4,5 +4,6 @@
     "api/previews.js": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [{ "source": "/admin", "destination": "/admin.html" }]
 }

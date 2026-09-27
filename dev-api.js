@@ -41,6 +41,11 @@ export default function devApi() {
       loadEnvFiles(root);
 
       server.middlewares.use(async (req, res, next) => {
+        // Lo mismo que el rewrite de vercel.json: /admin es la página del panel.
+        if (req.url === '/admin' || req.url?.startsWith('/admin?')) {
+          req.url = req.url.replace('/admin', '/admin.html');
+          return next();
+        }
         if (!req.url || !req.url.startsWith('/api/')) return next();
 
         const url = new URL(req.url, 'http://localhost');

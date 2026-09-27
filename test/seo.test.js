@@ -28,6 +28,10 @@ describe('seo del build', () => {
     expect(text).toContain('Disallow: /api/');
     expect(text).toContain(`Sitemap: ${SITE}/sitemap.xml`);
   });
+
+  it('robots deja fuera el panel', () => {
+    expect(robots()).toContain('Disallow: /admin');
+  });
 });
 
 describe('meta para rastreadores', () => {

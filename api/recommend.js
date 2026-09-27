@@ -22,7 +22,7 @@
  *  5. La misma canción dos veces en un día cuenta una: la segunda se acepta
  *     sin guardarse.
  */
-import { clientIp, kvConfigured, kvPipeline, readJson } from './_kv.js';
+import { clientIp, kvConfigured, kvPipeline, readJson, sameOrigin } from './_kv.js';
 import { checkRecommendation } from './_recommendation.js';
 import { logError } from './_log.js';
 
@@ -31,18 +31,6 @@ const DAY = 86_400;
 const PER_IP_HOUR = 3;
 const PER_IP_DAY = 8;
 const GLOBAL_DAY = 150;
-
-/** Solo desde la propia web. Los navegadores mandan Origin en todo POST. */
-function sameOrigin(req) {
-  const origin = req.headers?.origin;
-  const host = req.headers?.['x-forwarded-host'] || req.headers?.host;
-  if (!origin || !host) return false;
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 export default async function handler(req, res) {
   if (!kvConfigured()) {

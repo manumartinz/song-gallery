@@ -1,0 +1,366 @@
+/* El panel: los mismos tokens que la galería, sin nada de su maquetación.
+   Una columna que funciona igual en el teléfono, con blancos de 44 px. */
+@import '../styles/tokens.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--text);
+}
+
+.adm {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: var(--gap-md) 16px calc(var(--gap-xl) + env(safe-area-inset-bottom));
+}
+
+.adm--center {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.adm__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  margin-bottom: var(--gap-md);
+}
+
+.adm__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: var(--tracking-tight);
+}
+
+.adm__login {
+  display: grid;
+  gap: var(--gap-sm);
+  width: min(320px, 100%);
+  text-align: left;
+}
+
+.adm__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.7rem;
+  background: rgba(244, 241, 234, 0.04);
+  outline: none;
+}
+
+.adm__input:focus-visible {
+  border-color: var(--text-muted);
+}
+
+.adm__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.adm__btn:hover:not(:disabled) {
+  border-color: var(--text-muted);
+}
+
+.adm__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.adm__btn--main {
+  border-color: var(--bone);
+  background: var(--bone);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.adm__btn--main:hover:not(:disabled) {
+  background: #fff;
+}
+
+.adm__btn--danger {
+  border-color: #e0685e;
+  color: #f0a39c;
+}
+
+.adm__error {
+  margin: 0 0 var(--gap-sm);
+  padding: 0.6rem 0.85rem;
+  border-radius: 0.7rem;
+  background: rgba(224, 104, 94, 0.14);
+  color: #f0a39c;
+  font-size: 0.85rem;
+}
+
+.adm__tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: var(--gap-md);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.adm__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.adm__tab--on {
+  border-color: var(--line-strong);
+  background: rgba(244, 241, 234, 0.08);
+  color: var(--text);
+}
+
+.adm__count {
+  min-width: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--bone);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.adm__empty {
+  color: var(--text-muted);
+}
+
+.adm__list {
+  display: grid;
+  gap: var(--gap-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm__card {
+  display: grid;
+  gap: 0.55rem;
+  padding: var(--gap-md) 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(244, 241, 234, 0.025);
+}
+
+.adm__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem var(--gap-sm);
+  font-size: 0.85rem;
+}
+
+.adm__meta span,
+.adm__note {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.adm__note {
+  margin: 0;
+}
+
+.adm__song {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.adm__msg {
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--line-strong);
+  color: var(--text-muted);
+  font-style: italic;
+  overflow-wrap: anywhere;
+}
+
+.adm__found {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.adm__cands {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm__track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 60px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+}
+
+.adm__cands .adm__track {
+  border-color: var(--line);
+}
+
+.adm__track--on {
+  border-color: var(--bone) !important;
+  background: rgba(244, 241, 234, 0.06);
+}
+
+/* Toda la fila elige: un boton invisible a sangre, por debajo de los demas. */
+.adm__pick {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.adm__track img,
+.adm__noart {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 0.35rem;
+  object-fit: cover;
+  background: var(--line);
+  pointer-events: none;
+}
+
+.adm__info {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.adm__ttl,
+.adm__art {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adm__art {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.adm__icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.adm__icon:hover:not(:disabled) {
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.08);
+}
+
+.adm__icon:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.adm__search {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.adm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.adm__list--plain {
+  gap: 0.25rem;
+}
+
+.adm__row {
+  padding: 0.2rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.adm__rowctl {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.adm__by {
+  padding: 0 0.5rem 0.4rem calc(48px + 1.2rem);
+}
+
+@media (max-width: 480px) {
+  .adm__search {
+    flex-direction: column;
+  }
+
+  .adm__actions .adm__btn {
+    flex: 1;
+  }
+}

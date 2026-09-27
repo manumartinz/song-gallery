@@ -49,6 +49,9 @@ authorize.search = new URLSearchParams({
     'user-read-recently-played',
     'user-top-read',
     'playlist-modify-public',
+    /* Aunque la playlist sea pública: las creadas desde las apps nuevas de
+       Spotify contestan "Insufficient client scope" al escribir sin este. */
+    'playlist-modify-private',
   ].join(' '),
   state,
 });

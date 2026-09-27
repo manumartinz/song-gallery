@@ -87,7 +87,14 @@ export async function userFetch(pathOrUrl, { method = 'GET', body, retries = 1 }
       403,
     );
   }
-  if (!response.ok) throw new SpotifyError(`Spotify respondió ${response.status}.`, 502);
+  if (!response.ok) {
+    const error = new SpotifyError(`Spotify respondió ${response.status}.`, 502);
+    // El 502 es lo que contestamos; el código de Spotify queda para quien decida por él.
+    error.spotifyStatus = response.status;
+    throw error;
+  }
 
-  return response.json();
+  // Algunas escrituras contestan 201 con cuerpo y otras 200 sin él.
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
