@@ -92,6 +92,12 @@ Se comparten con `?a=`, igual que las playlists con `?p=`. Los dos son
 excluyentes: al cambiar de una cosa a otra se borra el parámetro que sobra, o al
 recargar volvería lo que se acaba de dejar.
 
+## Compartir
+
+La ficha de cada canción tiene un «Compartir» que manda el link de esta web con
+la canción abierta (`?p=…&t=…`), no el de Spotify. En el celu abre la hoja de
+compartir del sistema; en la compu copia el link y avisa abajo.
+
 ## Notas
 
 Cada canción puede llevar una nota mía: por qué está, de dónde me viene. Se

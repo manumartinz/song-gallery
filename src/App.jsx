@@ -9,6 +9,7 @@ import TrackGrid from './components/TrackGrid.jsx';
 import TrackList from './components/TrackList.jsx';
 import MoreOnSpotify from './components/MoreOnSpotify.jsx';
 import SourceRail from './components/SourceRail.jsx';
+import Toast from './components/Toast.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
@@ -17,6 +18,7 @@ import { dropPlaylistCache, parsePlaylistRef } from './lib/api.js';
 import { tag, trackEvent } from './lib/clarity.js';
 import isHardReload from './lib/hardReload.js';
 import { makeFilter, SORTS } from './lib/search.js';
+import { shareLink, trackUrl } from './lib/share.js';
 import {
   ALBUM_ENTRIES,
   CUSTOM_TRACKS,
@@ -37,6 +39,7 @@ import useReducedMotion from './hooks/useReducedMotion.js';
 import useRowRegistry from './hooks/useRowRegistry.js';
 import useSourceData from './hooks/useSourceData.js';
 import useSticky from './hooks/useSticky.js';
+import useToast from './hooks/useToast.js';
 import useUrlSync from './hooks/useUrlSync.js';
 
 const VIEW_KEY = 'song-gallery:view';
@@ -445,6 +448,25 @@ export default function App() {
 
   const handleHover = useCallback((index) => setHoverIndex(index), []);
 
+  const [toast, notify] = useToast();
+
+  /** Comparte el enlace a una cancion de la fuente abierta. */
+  const handleShare = useCallback(
+    async (index) => {
+      const track = tracks[index];
+      if (!track) return;
+      trackEvent('share');
+      const result = await shareLink({
+        title: `${track.title} — ${track.artistLine}`,
+        text: `${track.title}, de ${track.artistLine}`,
+        url: trackUrl({ kind: currentKind, id: currentId }, track.id),
+      });
+      if (result === 'copied') notify('Link copiado');
+      else if (result === 'failed') notify('No se pudo copiar el link');
+    },
+    [tracks, currentKind, currentId, notify],
+  );
+
   /* Cada criterio entra con el sentido que uno espera: los años y las ultimas
      añadidas de mas reciente a mas antiguo, el artista alfabetico. Volver a
      pulsar el criterio activo invierte el sentido. */
@@ -683,6 +705,7 @@ export default function App() {
     onSelect: handleSelect,
     onHover: handleHover,
     onSeek: seek,
+    onShare: handleShare,
     onPointerDown,
   };
 
@@ -888,6 +911,8 @@ export default function App() {
         onNext={() => skip(1)}
         onFocusRow={() => scrollTo(playingIndex)}
       />
+
+      <Toast toast={toast} />
     </>
   );
 }

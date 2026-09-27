@@ -21,6 +21,7 @@ export default function TrackList({
   onSelect,
   onHover,
   onSeek,
+  onShare,
   onPointerDown,
 }) {
   return (
@@ -49,6 +50,7 @@ export default function TrackList({
             onSelect={onSelect}
             onHover={onHover}
             onSeek={onSeek}
+            onShare={onShare}
           />
         );
       })}

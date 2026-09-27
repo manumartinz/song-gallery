@@ -41,6 +41,7 @@ function TrackRow({
   onSelect,
   onHover,
   onSeek,
+  onShare,
 }) {
   const setNode = useCallback((node) => register(index, node), [register, index]);
   const handleClick = useCallback(() => onSelect(index), [onSelect, index]);
@@ -217,6 +218,19 @@ function TrackRow({
               >
                 Abrir en Spotify
               </a>
+            ) : null}
+
+            {onShare ? (
+              <button
+                type="button"
+                className="tag--link"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onShare(index);
+                }}
+              >
+                Compartir
+              </button>
             ) : null}
           </div>
 

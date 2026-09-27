@@ -1276,7 +1276,8 @@ body.is-dragging-body * {
   pointer-events: none;
 }
 
-.row a {
+.row a,
+.row .tag--link {
   pointer-events: auto;
   cursor: pointer;
 }
@@ -2424,6 +2425,39 @@ body.is-dragging-body * {
   from {
     opacity: 0;
     transform: translate(-50%, 8px);
+  }
+}
+
+/* ---------- Aviso breve ---------- */
+
+/* Por encima del mini (5) y a su misma altura de sobra: el mini mide unos
+   5 rem y el aviso no debe taparle los controles justo al compartir desde el. */
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.8rem + env(safe-area-inset-bottom));
+  z-index: 6;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(12, 12, 16, 0.96);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  white-space: nowrap;
+  animation: toast-in var(--dur-mid) var(--ease-out);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
 }
 
