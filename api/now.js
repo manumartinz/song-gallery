@@ -12,6 +12,7 @@
  * dispositivo, ni el contexto, ni nada que diga dónde estoy.
  */
 import { pickArt } from './_normalize.js';
+import { logError } from './_log.js';
 
 const TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const API = 'https://api.spotify.com/v1/me/player';
@@ -90,7 +91,7 @@ export default async function handler(req, res) {
     }
     return res.status(200).json(now);
   } catch (error) {
-    console.error(JSON.stringify({ route: 'now', error: error.message }));
+    logError('now', error);
     res.statusCode = 204; // que no se vea: es un adorno, no algo que pueda fallar
     return res.end();
   }

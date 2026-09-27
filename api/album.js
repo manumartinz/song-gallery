@@ -12,6 +12,7 @@
 import { parseAlbumId, spotifyGet, SpotifyError, NOT_FOUND } from './_spotify.js';
 import { pickArt, yearOf, fetchArtistDetails, fetchFullTracks } from './_normalize.js';
 import { rateLimited } from './_ratelimit.js';
+import { logError } from './_log.js';
 
 /* Un disco doble largo cabe de sobra. Mas que esto ya es una recopilacion o una
    caja, y ninguna de las dos es lo que uno viene a escuchar aqui. */
@@ -146,6 +147,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     const status = error instanceof SpotifyError ? error.status : 500;
+    logError('album', { status, message: error.message }, { ref: req.query?.ref });
     return res.status(status).json({ error: error.message || 'Error inesperado.' });
   }
 }

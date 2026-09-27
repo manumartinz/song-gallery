@@ -32,7 +32,8 @@ que ya había. Lo único que cambia es la cabecera y la fila, que en un disco
 pierde la portada —serían catorce veces la misma— y pone el triángulo sobre el
 número de pista.
 
-React y Vite. Sin dependencias de cliente más allá de React.
+React y Vite. Sin dependencias de cliente más allá de React (y la tipografía,
+que se sirve desde la propia web).
 
 ## Correrlo
 
@@ -196,6 +197,10 @@ título, artista, portada y enlace: nada del dispositivo ni del contexto.
 
 Vercel. Las variables `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` van en los
 ajustes del proyecto.
+
+Los errores de las funciones salen en los logs de Vercel como una línea JSON
+(`api/_log.js`), con `level` `error` para los 5xx y `warn` para los 4xx: se
+puede filtrar por `"level":"error"` y montar una alerta sobre eso.
 
 La analítica es Microsoft Clarity, y solo se activa si hay `VITE_CLARITY_ID` en
 el build de producción (en `npm run dev` nunca graba). Va sin cookies: se

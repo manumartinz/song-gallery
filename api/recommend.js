@@ -10,6 +10,7 @@
  * no ve y un bot rellena; si viene, se contesta que sí y no se guarda nada.
  */
 import { kvConfigured, kvPipeline, overLimit, readJson } from './_kv.js';
+import { logError } from './_log.js';
 
 const LIMITS = { song: 200, name: 60, message: 400 };
 const KEEP = 2000;
@@ -58,7 +59,7 @@ export default async function handler(req, res) {
     ]);
     return res.status(200).json({ ok: true });
   } catch (error) {
-    console.error(JSON.stringify({ route: 'recommend', error: error.message }));
+    logError('recommend', error);
     return res.status(500).json({ error: 'No se pudo guardar. Probá de nuevo en un rato.' });
   }
 }

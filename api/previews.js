@@ -13,6 +13,7 @@
 import { parsePlaylistId, parseAlbumId, spotifyGet, SpotifyError, NOT_FOUND } from './_spotify.js';
 import { fetchFullTracks } from './_normalize.js';
 import { rateLimited } from './_ratelimit.js';
+import { logError } from './_log.js';
 import { resolvePreview, mapWithConcurrency } from './_preview.js';
 
 const CONCURRENCY = 8;
@@ -108,6 +109,11 @@ export default async function handler(req, res) {
     return res.status(200).json({ previews });
   } catch (error) {
     const status = error instanceof SpotifyError ? error.status : 500;
+    logError(
+      'previews',
+      { status, message: error.message },
+      { ref: req.query?.ref, kind: req.query?.kind, offset: req.query?.offset },
+    );
     return res.status(status).json({ error: error.message || 'Error inesperado.' });
   }
 }

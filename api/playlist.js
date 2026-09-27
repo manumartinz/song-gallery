@@ -11,6 +11,7 @@
 import { parsePlaylistId, spotifyGet, SpotifyError } from './_spotify.js';
 import { pickArt, yearOf, fetchArtistDetails } from './_normalize.js';
 import { rateLimited } from './_ratelimit.js';
+import { logError } from './_log.js';
 
 const MAX_TRACKS = 200; // tope para que la funcion no se eternice en playlists enormes
 
@@ -118,6 +119,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     const status = error instanceof SpotifyError ? error.status : 500;
+    logError('playlist', { status, message: error.message }, { ref: req.query?.ref });
     return res.status(status).json({ error: error.message || 'Error inesperado.' });
   }
 }

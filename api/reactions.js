@@ -12,6 +12,7 @@
  * Sin Redis configurado el GET responde 204 y la web no enseña los botones.
  */
 import { kvConfigured, kvPipeline, overLimit, readJson } from './_kv.js';
+import { logError } from './_log.js';
 
 const KINDS = ['love', 'new'];
 const TRACK_ID = /^[A-Za-z0-9]{22}$/;
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Método no permitido.' });
   } catch (error) {
-    console.error(JSON.stringify({ route: 'reactions', error: error.message }));
+    logError('reactions', error);
     return res.status(500).json({ error: 'No se pudo guardar la reacción.' });
   }
 }
