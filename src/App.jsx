@@ -13,179 +13,47 @@ import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
 import { EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
-import { PLAYLISTS } from './config/playlists.js';
-import { ALBUMS } from './config/albums.js';
-import {
-  cachePlaylist,
-  dropPlaylistCache,
-  fetchPreviews,
-  fetchSource,
-  parseAlbumRef,
-  parsePlaylistRef,
-} from './lib/api.js';
+import { dropPlaylistCache, parsePlaylistRef } from './lib/api.js';
 import { tag, trackEvent } from './lib/clarity.js';
-import { dominantColor } from './lib/color.js';
 import isHardReload from './lib/hardReload.js';
 import { makeFilter, SORTS } from './lib/search.js';
+import {
+  ALBUM_ENTRIES,
+  CUSTOM_TRACKS,
+  DEFAULT_SORTS,
+  FIXED_ENTRIES,
+  MAX_CUSTOM,
+  persistCustom,
+  readCustomEntries,
+  readInitialSource,
+} from './lib/sources.js';
+import useAccentColor from './hooks/useAccentColor.js';
 import useDragScroll from './hooks/useDragScroll.js';
+import useKeyboard from './hooks/useKeyboard.js';
+import usePlaybackFailures from './hooks/usePlaybackFailures.js';
 import usePlayer from './hooks/usePlayer.js';
 import useReducedMotion from './hooks/useReducedMotion.js';
 import useRowRegistry from './hooks/useRowRegistry.js';
+import useSourceData from './hooks/useSourceData.js';
 import useSticky from './hooks/useSticky.js';
+import useUrlSync from './hooks/useUrlSync.js';
 
-const CUSTOM_KEY = 'song-gallery:custom';
 const VIEW_KEY = 'song-gallery:view';
 const INTRO_KEY = 'song-gallery:intro-seen'; // lo escribe Splash; aqui solo se consulta
-const PREVIEW_CHUNK = 40; // tramo con el que se van pidiendo los previews
-
-/* Topes de las playlists que pega el visitante. Las del repo no los tienen: son
-   la recomendacion, y se ven enteras.
-
-   El de canciones no es una cifra estetica. Una playlist ajena de 200 pistas se
-   lleva cinco tramos de previews (cinco funciones, doscientas resoluciones
-   contra Deezer) y ~170 KB del almacenamiento del visitante, para algo que ni
-   siquiera es lo que ha venido a ver. Con 49 son dos tramos, y el que quiera la
-   suya entera la tiene a un click en Spotify. */
-const MAX_CUSTOM = 6;
-const CUSTOM_TRACKS = 49;
-
-/**
- * Fusiona un tramo de previews en la playlist.
- *
- * Se cruza por ID DE PISTA y no por posicion: /api/playlist descarta episodios
- * y pistas locales, asi que las posiciones del cliente no coinciden con los
- * offsets de Spotify. Solo rellena lo que sigue sin resolver, para que un tramo
- * que llegue tarde no pise nada.
- */
-function mergePreviews(playlist, previews) {
-  if (!previews.length) return playlist;
-
-  const byId = new Map(previews.map((preview) => [preview.id, preview]));
-  let changed = false;
-
-  const tracks = playlist.tracks.map((track) => {
-    const found = byId.get(track.id);
-    if (!found || track.previewUrl !== undefined) return track;
-    changed = true;
-    return { ...track, previewUrl: found.previewUrl, previewSource: found.previewSource };
-  });
-
-  return changed ? { ...playlist, tracks } : playlist;
-}
-
-/** Normaliza la config del repo a entradas con id de playlist resuelto. */
-function toEntries(list) {
-  return list
-    .map((item) => {
-      const id = parsePlaylistRef(item.ref);
-      return id ? { id, label: item.label || 'Playlist', ref: item.ref, sort: item.sort } : null;
-    })
-    .filter(Boolean);
-}
-
-/**
- * Lo mismo para las que pega el visitante, que tienen otra forma.
- *
- * El nombre no se sabe al añadirlas —solo hay un link— asi que `label` nace en
- * null y se rellena cuando responde Spotify. `custom` es lo que luego decide
- * quien lleva su aspa para borrarla y a quien se le aplica el tope de pistas.
- *
- * El recorte a MAX_CUSTOM se hace tambien AQUI, al leer, y no solo al añadir:
- * en el navegador de quien ya paso por la web hay listas guardadas de antes de
- * que existiera el tope.
- */
-function toCustomEntries(list) {
-  return (Array.isArray(list) ? list : [])
-    .map((item) => {
-      const id = parsePlaylistRef(item?.ref ?? item?.id);
-      if (!id) return null;
-      /* "Pegada" era la etiqueta fija de todas antes de que se les pusiera su
-         nombre. Tratarla como "sin nombre" hace que quien ya tenga playlists
-         guardadas reciba el nombre real la primera vez que las abra, en vez de
-         quedarse con el rotulo viejo para siempre. */
-      const label = item.label && item.label !== 'Pegada' ? item.label : null;
-      return { id, label, ref: id, custom: true };
-    })
-    .filter(Boolean)
-    .slice(0, MAX_CUSTOM);
-}
-
-function persistCustom(list) {
-  try {
-    localStorage.setItem(CUSTOM_KEY, JSON.stringify(list));
-  } catch {
-    /* sin persistencia, sigue funcionando en esta sesion */
-  }
-}
-
-/**
- * Criterio con el que abre cada playlist fija, declarado en la config del repo.
- *
- * Se resuelve desde PLAYLISTS y no desde `entries` a proposito: las playlists
- * que añade el visitante no traen configuracion, y meter `entries` en las
- * dependencias del efecto de carga lo volveria a disparar cada vez que alguien
- * añade una.
- */
-const DEFAULT_SORTS = new Map(
-  toEntries(PLAYLISTS)
-    .filter((entry) => entry.sort && SORTS[entry.sort])
-    .map((entry) => [entry.id, entry.sort]),
-);
 
 /** Una tecla sola, sin modificadores: los atajos del navegador van por delante. */
 function bare(event) {
   return !event.metaKey && !event.ctrlKey && !event.altKey;
 }
 
-function readCustomEntries() {
-  try {
-    const raw = localStorage.getItem(CUSTOM_KEY);
-    return raw ? toCustomEntries(JSON.parse(raw)) : [];
-  } catch {
-    return [];
-  }
-}
-
-/* Los albumes del repo, resueltos una sola vez. El rotulo va al lado del id y no
-   en dos listas paralelas: al descartar los links invalidos las posiciones
-   dejarian de corresponderse y saldria el nombre de un disco debajo de otro. */
-const ALBUM_ENTRIES = ALBUMS.map((item) => ({
-  id: parseAlbumRef(item.ref),
-  label: item.label || 'Álbum',
-})).filter((entry) => entry.id);
-
 /* Criterios que un album no puede ofrecer. Fuera del componente para que sea
    siempre el mismo array y no rompa el memo de la barra de herramientas. */
 const SORTS_OFF_ALBUM = ['added'];
 
-/* Con que abre la pagina. `?a=` gana a `?p=` porque son excluyentes y la URL
-   siempre lleva sólo uno de los dos; que se miren en este orden sólo importa si
-   alguien construye a mano un enlace con ambos.
-
-   Que `?p=` siga significando lo mismo que antes no es un detalle: todos los
-   enlaces compartidos hasta hoy lo llevan. */
-function readInitialSource() {
-  const params = new URLSearchParams(location.search);
-
-  const album = parseAlbumRef(params.get('a'));
-  if (album) return { kind: 'album', id: album };
-
-  const playlist = parsePlaylistRef(params.get('p'));
-  if (playlist) return { kind: 'playlist', id: playlist };
-
-  const first = [...toEntries(PLAYLISTS), ...readCustomEntries()][0];
-  if (first) return { kind: 'playlist', id: first.id };
-
-  // Sin playlists en la config, un álbum es mejor arranque que una página vacía.
-  return ALBUM_ENTRIES.length
-    ? { kind: 'album', id: ALBUM_ENTRIES[0].id }
-    : { kind: 'playlist', id: null };
-}
-
 export default function App() {
   const reducedMotion = useReducedMotion();
 
-  const fixedEntries = useMemo(() => toEntries(PLAYLISTS), []);
+  const fixedEntries = FIXED_ENTRIES;
   const [customEntries, setCustomEntries] = useState(readCustomEntries);
   const entries = useMemo(() => {
     const seen = new Set();
@@ -206,11 +74,8 @@ export default function App() {
   }, [customEntries]);
 
   /* La fuente inicial sale de la URL (?p= playlist, ?a= album) para que la
-     vista sea compartible.
-
-     No se llama `source` a propósito: ese nombre ya lo usa como variable local
-     el efecto del acento cromático, ahí abajo. */
-  const [current, setCurrent] = useState(readInitialSource);
+     vista sea compartible. */
+  const [current, setCurrent] = useState(() => readInitialSource());
   /* El resto del componente trabaja con el id pelado, como toda la vida. Sólo
      la carga, la URL y la cabecera necesitan saber además de qué tipo es. */
   const currentId = current.id;
@@ -246,9 +111,6 @@ export default function App() {
   // Estable a proposito: Splash lo usa como dependencia de su temporizador.
   const dismissSplash = useCallback(() => setShowSplash(false), []);
 
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [adding, setAdding] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -266,6 +128,8 @@ export default function App() {
   /* Pistas que el reproductor no consiguio arrancar (enlace caido, bloqueo por
      region). Se tratan igual que las que ya vienen sin preview. */
   const [unplayable, setUnplayable] = useState(() => new Set());
+  /* Claves ya reintentadas tras un fallo. Es por fuente: la vacia la carga. */
+  const retriedKeys = useRef(new Set());
 
   /* Pista que se ha clicado antes de que su preview estuviese resuelto: se
      reproduce sola en cuanto llega. -1 = nada esperando. */
@@ -274,10 +138,6 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('original');
   const [sortDir, setSortDir] = useState(1);
-
-  const tracks = useMemo(() => data?.tracks ?? [], [data]);
-  const focusedIndex = hoverIndex ?? keyIndex;
-  const currentTrack = tracks[playingIndex] || null;
 
   /* Cuantas canciones se enseñan de la fuente que se esta viendo. Las del repo
      —playlists fijas y albumes— todas; las playlists pegadas, hasta
@@ -290,6 +150,51 @@ export default function App() {
         : Infinity,
     [entries, currentId, isAlbum],
   );
+
+  // Fin de tema -> avanza. Va por ref porque `skip` se define mas abajo.
+  const endedRef = useRef(null);
+  const player = usePlayer({
+    crossfade: !reducedMotion,
+    onEnded: () => endedRef.current?.(),
+  });
+
+  const { play, toggle, seek, stop, preload, getPosition } = player;
+  const { setVolume, nudgeVolume, toggleMute } = player;
+
+  /* ---------- Carga de la fuente (playlist o album) ---------- */
+
+  /* Fuente nueva, todo lo que pertenecia a la anterior en blanco. Los criterios
+     de orden tambien: mantenerlos confundiria mas que ayudar. "En blanco" es el
+     orden que declare la config, y `original` para las que no declaren
+     ninguno —que es el caso de todos los albumes, donde `original` significa
+     el orden del disco. */
+  const resetForSource = useCallback(
+    (source) => {
+      stop();
+      setPlayingIndex(-1);
+      setSelectedIndex(-1);
+      setUnplayable(new Set());
+      retriedKeys.current = new Set();
+      setHoverIndex(null);
+      setKeyIndex(0);
+      setQuery('');
+      const initialSort = DEFAULT_SORTS.get(source.id) ?? 'original';
+      setSortBy(initialSort);
+      setSortDir(SORTS[initialSort].dir);
+    },
+    [stop],
+  );
+
+  const { data, loading, error, retry, resolveNow, expirePreview } = useSourceData({
+    kind: currentKind,
+    id: currentId,
+    trackLimit,
+    onReset: resetForSource,
+  });
+
+  const tracks = useMemo(() => data?.tracks ?? [], [data]);
+  const focusedIndex = hoverIndex ?? keyIndex;
+  const currentTrack = tracks[playingIndex] || null;
 
   /* Lo que se ve, ya filtrado y ordenado. Cada entrada conserva su indice
      ORIGINAL: esa es la identidad con la que trabaja todo el estado (que suena,
@@ -319,9 +224,6 @@ export default function App() {
   const { register, scrollTo, getNode } = useRowRegistry();
   const { onPointerDown, wasDragged } = useDragScroll({ enabled: !reducedMotion });
   const [sentinelRef, titleStuck] = useSticky();
-
-  // Rompe el ciclo entre los saltos de pista y el player, que se necesitan mutuamente.
-  const playRef = useRef(null);
 
   /* `previewUrl` tiene tres estados, y la diferencia importa:
        undefined -> aun sin resolver; la fila NO debe verse apagada
@@ -366,10 +268,10 @@ export default function App() {
       setKeyIndex(index);
       // El indice desambigua playlists con la misma cancion repetida, donde el
       // id se repite y el reproductor la confundiria con la que ya suena.
-      playRef.current?.(track, index);
+      play(track, index);
       scrollTo(index);
     },
-    [tracks, isPlayable, scrollTo],
+    [tracks, isPlayable, play, scrollTo],
   );
 
   /* Cuando la pista que estaba esperando termina de resolverse, arranca sola.
@@ -384,28 +286,6 @@ export default function App() {
     if (typeof track.previewUrl === 'string') startTrack(playWhenReady);
   }, [playWhenReady, tracks, startTrack]);
 
-  /** Adelanta el tramo que contiene una pista concreta, sin esperar su turno. */
-  const resolveNow = useCallback(
-    async (index) => {
-      if (!currentId) return;
-      try {
-        // Ventana alrededor del indice: como se cruza por id, basta con que la
-        // pista caiga dentro aunque el offset de Spotify no cuadre exacto.
-        const previews = await fetchPreviews(
-          { kind: current.kind, id: currentId },
-          Math.max(0, index - 2),
-          10,
-        );
-        setData((prev) => (prev ? mergePreviews(prev, previews) : prev));
-      } catch {
-        // Da igual: el recorrido secuencial acabara cubriendola.
-      }
-    },
-    /* Los dos primitivos, no el objeto: `current` es nuevo en cada render y
-       meterlo entero rehace este callback sin que haya cambiado nada. */
-    [current.kind, currentId],
-  );
-
   const skip = useCallback(
     (step) => {
       const next = findPlayable(playingIndex, step);
@@ -413,15 +293,7 @@ export default function App() {
     },
     [findPlayable, playingIndex, startTrack],
   );
-
-  const player = usePlayer({
-    crossfade: !reducedMotion,
-    onEnded: () => skip(1),
-  });
-  playRef.current = player.play;
-
-  const { play, toggle, seek, stop, preload, getPosition } = player;
-  const { setVolume, nudgeVolume, toggleMute } = player;
+  endedRef.current = () => skip(1);
 
   /* Calienta la cache con el tema siguiente para que el avance automatico
      entre sin hueco. Va por un elemento aparte, no por los decks. */
@@ -431,151 +303,30 @@ export default function App() {
     if (next !== -1) preload(tracks[next]?.previewUrl);
   }, [playingIndex, findPlayable, tracks, preload]);
 
-  /* ---------- Carga de la fuente (playlist o album) ---------- */
+  /* ---------- URL ---------- */
 
-  useEffect(() => {
-    const source = { kind: currentKind, id: currentId };
+  /* Cancion pedida por ?t= al entrar: se abre la ficha y se centra, pero NO se
+     reproduce. No es una decision estetica: el navegador bloquea el audio sin
+     un gesto previo, play() rechazaria con NotAllowedError, y usePlayer solo
+     perdona AbortError -- el resto marca la pista como muerta y salta a la
+     siguiente. Un enlace compartido se autodestruiria nada mas abrirlo. La fila
+     ya muestra su triangulo de play, que es invitacion suficiente. */
+  const openDeepLink = useCallback(
+    (index) => {
+      setSelectedIndex(index);
+      setKeyIndex(index);
+      scrollTo(index, 'instant');
+    },
+    [scrollTo],
+  );
 
-    if (!currentId) {
-      setData(null);
-      return undefined;
-    }
-
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    stop();
-    setPlayingIndex(-1);
-    setSelectedIndex(-1);
-    setUnplayable(new Set());
-    retriedKeys.current = new Set();
-    setHoverIndex(null);
-    setKeyIndex(0);
-    /* Fuente nueva, criterios en blanco: mantenerlos confundiria mas que
-       ayudar. "En blanco" es el orden que declare la config, y `original` para
-       las que no declaren ninguno —que es el caso de todos los albumes, donde
-       `original` significa el orden del disco. */
-    setQuery('');
-    const initialSort = DEFAULT_SORTS.get(currentId) ?? 'original';
-    setSortBy(initialSort);
-    setSortDir(SORTS[initialSort].dir);
-
-    /* Los previews llegan despues, por tramos, para que la lista aparezca en
-       cuanto responde Spotify en vez de esperar a 200 resoluciones. Vive dentro
-       de este efecto a proposito: su ciclo de vida es el de la playlist, y el
-       mismo AbortController lo corta al cambiar de una a otra. */
-    const streamPreviews = async (payload) => {
-      if (payload.tracks.every((track) => track.previewUrl !== undefined)) return;
-
-      /* `trackCount` es lo que el server MANDO; `totalCount` es lo que tiene la
-         playlist en Spotify, que puede ser mucho mas porque /api/playlist corta
-         en 200. Recorrer el segundo era pedir tramos de canciones que no estan
-         en el payload: con una playlist de 5.000 salian 125 peticiones de las
-         que servian 5, y `mergePreviews` tiraba el resto por no encontrar los
-         ids. Ademas reventaba el limite por IP y dejaba al visitante sin poder
-         cargar nada durante diez minutos.
-
-         El tope de las pegadas entra tambien aqui: si solo se enseñan 49, pedir
-         previews de la 50 en adelante es gastar por gusto. */
-      const total = Math.min(payload.trackCount ?? payload.tracks.length, trackLimit);
-      let merged = payload;
-
-      for (let offset = 0; offset < total; offset += PREVIEW_CHUNK) {
-        if (controller.signal.aborted) return;
-
-        try {
-          const previews = await fetchPreviews(source, offset, PREVIEW_CHUNK, {
-            signal: controller.signal,
-          });
-          if (controller.signal.aborted) return;
-
-          merged = mergePreviews(merged, previews);
-          setData((prev) => (prev && prev.id === payload.id ? mergePreviews(prev, previews) : prev));
-        } catch (cause) {
-          if (controller.signal.aborted || cause.name === 'AbortError') return;
-          /* Un 429 no es un tramo que ha fallado, es el limite por IP diciendo
-             que pares: seguir pidiendo solo consume la ventana entera para que
-             la siguiente playlist tampoco cargue. Los demas errores si son de
-             su tramo y no deben tumbar a los otros. */
-          if (cause.status === 429) return;
-        }
-      }
-
-      // Completa: se cachea ya fusionada para que la proxima visita no repita.
-      if (!controller.signal.aborted) cachePlaylist(source, merged);
-    };
-
-    fetchSource(source, { signal: controller.signal })
-      .then((payload) => {
-        if (controller.signal.aborted) return;
-        setData(payload);
-        window.scrollTo({ top: 0, behavior: 'instant' });
-        streamPreviews(payload);
-      })
-      .catch((cause) => {
-        if (controller.signal.aborted || cause.name === 'AbortError') return;
-        setError(cause.message);
-        setData(null);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-    /* `trackLimit` es un numero, no un objeto: solo cambia de valor al pasar de
-       una playlist del repo a una pegada, y eso ya trae un `currentId` nuevo.
-       Ponerlo aqui no dispara recargas de mas.
-
-       `currentKind` y `currentId` entran sueltos y NO el objeto `current`: seria
-       uno nuevo en cada render, y este efecto para la reproduccion y vacia el
-       estado de la fila que suena. */
-  }, [currentKind, currentId, stop, trackLimit]);
-
-  /* Mantiene la URL sincronizada sin ensuciar el historial, para que la barra
-     de direcciones sea siempre un enlace valido de lo que se esta viendo:
-     ?p= la playlist, ?a= el album, ?t= la cancion que suena.
-
-     Los dos primeros son EXCLUYENTES y por eso se borra siempre el que no toca:
-     si al saltar de un album a una playlist se quedase el ?a= colgando, al
-     recargar volveria el album, que es justo lo que uno acaba de dejar. */
-  useEffect(() => {
-    const url = new URL(location.href);
-    const param = isAlbum ? 'a' : 'p';
-    const other = isAlbum ? 'p' : 'a';
-
-    if (currentId) url.searchParams.set(param, currentId);
-    else url.searchParams.delete(param);
-    url.searchParams.delete(other);
-
-    if (currentTrack?.id) url.searchParams.set('t', currentTrack.id);
-    else url.searchParams.delete('t');
-
-    history.replaceState(null, '', url);
-  }, [currentId, isAlbum, currentTrack]);
-
-  /* Cancion pedida por ?t= al entrar. Se guarda en una ref y se consume UNA
-     vez: a partir de ahi la URL la escribimos nosotros con lo que suena, y
-     volver a leerla nos devolveria a la de partida en cada cambio. */
-  const deepLinkRef = useRef(new URLSearchParams(location.search).get('t'));
-
-  useEffect(() => {
-    const wanted = deepLinkRef.current;
-    if (!wanted || !tracks.length) return;
-    deepLinkRef.current = null;
-
-    const index = tracks.findIndex((track) => track.id === wanted);
-    if (index === -1) return; // el enlace no es de esta playlist
-
-    /* Se abre la ficha y se centra, pero NO se reproduce. No es una decision
-       estetica: el navegador bloquea el audio sin un gesto previo, play()
-       rechazaria con NotAllowedError, y usePlayer solo perdona AbortError -- el
-       resto marca la pista como muerta y salta a la siguiente. Un enlace
-       compartido se autodestruiria nada mas abrirlo. La fila ya muestra su
-       triangulo de play, que es invitacion suficiente. */
-    setSelectedIndex(index);
-    setKeyIndex(index);
-    scrollTo(index, 'instant');
-  }, [tracks, scrollTo]);
+  useUrlSync({
+    id: currentId,
+    isAlbum,
+    trackId: currentTrack?.id ?? null,
+    tracks,
+    onDeepLink: openDeepLink,
+  });
 
   useEffect(() => {
     tag('view', view);
@@ -621,35 +372,13 @@ export default function App() {
 
   /* En una playlist cada cancion trae su portada y el color cambia al sonar.
      Un album tiene una sola, asi que no hace falta esperar a darle al play: el
-     color es el del disco desde que se abre.
-
-     Va como cadena y no mirando `data` en el efecto: `data` cambia con cada
-     tramo de previews que llega, y la URL de la portada no. */
-  const accentSource =
+     color es el del disco desde que se abre. */
+  useAccentColor(
     currentTrack?.art?.sm ||
-    currentTrack?.art?.lg ||
-    (isAlbum ? data?.art?.sm || data?.image : null) ||
-    null;
-
-  useEffect(() => {
-    const source = accentSource;
-    if (!source) return undefined;
-
-    let cancelled = false;
-    dominantColor(source).then((color) => {
-      if (cancelled) return;
-      // Solo hay version translucida si salio un rgb(); el fallback es hex.
-      const soft = color.startsWith('rgb(')
-        ? color.replace('rgb(', 'rgba(').replace(')', ', 0.2)')
-        : 'rgba(244, 241, 234, 0.16)';
-      document.documentElement.style.setProperty('--accent', color);
-      document.documentElement.style.setProperty('--accent-soft', soft);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [accentSource]);
+      currentTrack?.art?.lg ||
+      (isAlbum ? data?.art?.sm || data?.image : null) ||
+      null,
+  );
 
   /* ---------- Metadatos para los controles del sistema ---------- */
 
@@ -738,154 +467,82 @@ export default function App() {
     startTrack(pool[Math.floor(Math.random() * pool.length)]);
   }, [visible, isPlayable, playingIndex, startTrack]);
 
-  /* Si una pista falla de verdad al arrancar, se marca como no reproducible y
-     se salta a la siguiente. Sin esto la app seguia creyendo que sonaba (el
-     playingIndex se fija antes de confirmar), y el siguiente click sobre ella
-     iba a toggle() en vez de a play(): de ahi que se quedase pegada. */
-  const failStreak = useRef(0);
-  const handledFailure = useRef(null);
-  const retriedKeys = useRef(new Set());
+  usePlaybackFailures({
+    player,
+    retriedKeys,
+    findPlayable,
+    startTrack,
+    expirePreview,
+    resolveNow,
+    setUnplayable,
+    setPlayingIndex,
+    setPlayWhenReady,
+  });
 
-  /** Devuelve una pista al estado "pendiente" para que se vuelva a resolver. */
-  const expirePreview = useCallback((index) => {
-    setData((prev) => {
-      if (!prev) return prev;
-      const tracks = prev.tracks.map((track, i) => {
-        if (i !== index) return track;
-        const { previewUrl, previewSource, ...rest } = track;
-        return rest; // sin previewUrl = pendiente
-      });
-      return { ...prev, tracks };
-    });
-  }, []);
+  useKeyboard((event) => {
+    // No robar teclas mientras se escribe o se ajusta la barra.
+    if (event.target.closest?.('input, textarea, [role="slider"]')) return;
 
-  useEffect(() => {
-    if (player.isPlaying) {
-      failStreak.current = 0;
-      handledFailure.current = null;
-    }
-  }, [player.isPlaying]);
+    // El cursor tambien se mueve por el orden visible, no por el original.
+    const step = (delta) => {
+      event.preventDefault();
+      if (!visible.length) return;
 
-  useEffect(() => {
-    const failed = player.failedKey;
-    if (player.error == null || failed == null) return;
-    // Marcar la pista cambia `unplayable`, lo que rehace findPlayable y vuelve
-    // a disparar este efecto: sin esta guarda saltaria dos veces por fallo.
-    if (handledFailure.current === failed) return;
-    handledFailure.current = failed;
+      const at = visible.findIndex((item) => item.index === focusedIndex);
+      const slot = Math.min(visible.length - 1, Math.max(0, (at === -1 ? 0 : at) + delta));
+      const next = visible[slot].index;
 
-    /* Las URLs de preview van firmadas y caducan a los ~15 minutos, asi que lo
-       primero que hay que descartar es que esta simplemente se haya quedado
-       vieja (una pestaña abierta un rato basta). Se vuelve a resolver y se
-       reintenta UNA vez antes de dar la pista por muerta. */
-    if (!retriedKeys.current.has(failed)) {
-      retriedKeys.current.add(failed);
-      expirePreview(failed);
-      setPlayWhenReady(failed);
-      resolveNow(failed);
-      return;
-    }
-
-    setUnplayable((prev) => {
-      if (prev.has(failed)) return prev;
-      const next = new Set(prev);
-      next.add(failed);
-      return next;
-    });
-    trackEvent('preview_failed');
-    setPlayingIndex(-1);
-
-    // Guardarrail: si fallan varias seguidas no recorremos la lista sola.
-    failStreak.current += 1;
-    if (failStreak.current > 3) return;
-
-    const next = findPlayable(failed, 1);
-    if (next !== -1) startTrack(next);
-  }, [player.error, player.failedKey, findPlayable, startTrack, expirePreview, resolveNow]);
-
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      // No robar teclas mientras se escribe o se ajusta la barra.
-      if (event.target.closest?.('input, textarea, [role="slider"]')) return;
-
-      // El cursor tambien se mueve por el orden visible, no por el original.
-      const step = (delta) => {
-        event.preventDefault();
-        if (!visible.length) return;
-
-        const at = visible.findIndex((item) => item.index === focusedIndex);
-        const slot = Math.min(visible.length - 1, Math.max(0, (at === -1 ? 0 : at) + delta));
-        const next = visible[slot].index;
-
-        setHoverIndex(null);
-        setKeyIndex(next);
-        scrollTo(next);
-      };
-
-      switch (event.key) {
-        case 'ArrowDown':
-        case 'j':
-          step(1);
-          break;
-        case 'ArrowUp':
-        case 'k':
-          step(-1);
-          break;
-        case 'Enter':
-          event.preventDefault();
-          handleSelect(focusedIndex);
-          break;
-        case ' ':
-          event.preventDefault();
-          setTouched(true);
-          if (player.trackId) toggle();
-          else handleSelect(focusedIndex);
-          break;
-        case 'ArrowRight':
-          if (player.trackId) seek(getPosition() + 5);
-          break;
-        case 'ArrowLeft':
-          if (player.trackId) seek(getPosition() - 5);
-          break;
-        /* Volumen con las teclas de siempre. Las flechas arriba y abajo ya son
-           del cursor de la lista, asi que aqui van los signos. Con modificador
-           no: Cmd+M minimiza la ventana y Ctrl+- es el zoom del navegador, y
-           robarles el gesto seria silenciar la pagina sin querer. */
-        case '+':
-        case '=':
-          if (!bare(event)) break;
-          nudgeVolume(0.1);
-          break;
-        case '-':
-          if (!bare(event)) break;
-          nudgeVolume(-0.1);
-          break;
-        case 'm':
-          if (!bare(event)) break;
-          toggleMute();
-          break;
-        default:
-          break;
-      }
+      setHoverIndex(null);
+      setKeyIndex(next);
+      scrollTo(next);
     };
 
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-    /* La posicion se lee al vuelo con getPosition() y NO esta en las
-       dependencias: tenerla ahi volvia a registrar este listener global veinte
-       veces por segundo mientras sonaba algo. */
-  }, [
-    focusedIndex,
-    visible,
-    scrollTo,
-    handleSelect,
-    toggle,
-    seek,
-    getPosition,
-    nudgeVolume,
-    toggleMute,
-    player.trackId,
-  ]);
+    switch (event.key) {
+      case 'ArrowDown':
+      case 'j':
+        step(1);
+        break;
+      case 'ArrowUp':
+      case 'k':
+        step(-1);
+        break;
+      case 'Enter':
+        event.preventDefault();
+        handleSelect(focusedIndex);
+        break;
+      case ' ':
+        event.preventDefault();
+        setTouched(true);
+        if (player.trackId) toggle();
+        else handleSelect(focusedIndex);
+        break;
+      case 'ArrowRight':
+        if (player.trackId) seek(getPosition() + 5);
+        break;
+      case 'ArrowLeft':
+        if (player.trackId) seek(getPosition() - 5);
+        break;
+      /* Volumen con las teclas de siempre. Las flechas arriba y abajo ya son
+         del cursor de la lista, asi que aqui van los signos. Con modificador
+         no: Cmd+M minimiza la ventana y Ctrl+- es el zoom del navegador, y
+         robarles el gesto seria silenciar la pagina sin querer. */
+      case '+':
+      case '=':
+        if (!bare(event)) break;
+        nudgeVolume(0.1);
+        break;
+      case '-':
+        if (!bare(event)) break;
+        nudgeVolume(-0.1);
+        break;
+      case 'm':
+        if (!bare(event)) break;
+        toggleMute();
+        break;
+      default:
+        break;
+    }
+  });
 
   /* Cambiar de fuente. Dos funciones y no una con un parametro: quien las llama
      sabe siempre cual de las dos cosas esta abriendo, y un id pelado no permite
@@ -908,10 +565,10 @@ export default function App() {
   /**
    * Devuelve el motivo del rechazo, o null si la playlist entro.
    *
-   * Devolver el mensaje en vez de llamar a setError es a proposito: setError
-   * cambia la pagina entera por ErrorState, asi que avisar de un link mal
-   * pegado borraba de la pantalla la playlist que se estuviera escuchando. El
-   * menu pinta esto junto al campo, donde se ha cometido el error.
+   * Devolver el mensaje en vez de mostrar un error de pagina es a proposito:
+   * ErrorState cambia la pagina entera, asi que avisar de un link mal pegado
+   * borraba de la pantalla la playlist que se estuviera escuchando. El menu
+   * pinta esto junto al campo, donde se ha cometido el error.
    */
   const handleAddPlaylist = useCallback(
     (value) => {
@@ -1106,10 +763,7 @@ export default function App() {
           {loading ? <LoadingList /> : null}
 
           {!loading && error ? (
-            <ErrorState
-              message={error}
-              onRetry={currentId ? () => setCurrent({ kind: currentKind, id: currentId }) : null}
-            />
+            <ErrorState message={error} onRetry={currentId ? retry : null} />
           ) : null}
 
           {!loading && !error && !currentId ? <EmptyState onAdd={() => setAdding(true)} /> : null}
