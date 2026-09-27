@@ -41,6 +41,16 @@
     <link rel="canonical" href="https://music.manuelmartinez.ar/" />
 
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!--
+      Instalable en la pantalla de inicio. Sin service worker a propósito: los
+      navegadores ya no lo exigen para instalar, y uno que cachee mal es la
+      forma más rápida de dejar a alguien con una versión vieja para siempre.
+      Los PNG salen del mismo dibujo que el favicon; el de iOS y el "maskable"
+      van a sangre porque el sistema les pone su propia máscara.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Música" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
