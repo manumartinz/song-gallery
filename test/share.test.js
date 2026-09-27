@@ -56,3 +56,11 @@ describe('injectMeta', () => {
     expect(out).toContain('<title>A &quot;b&quot; &lt;c&gt;</title>');
   });
 });
+
+describe('rgbToHex', async () => {
+  const { rgbToHex } = await import('../src/lib/share.js');
+  it('convierte el acento a hex y rechaza lo que no es rgb()', () => {
+    expect(rgbToHex('rgb(255, 129, 55)')).toBe('ff8137');
+    expect(rgbToHex('#f4f1ea')).toBeNull();
+  });
+});

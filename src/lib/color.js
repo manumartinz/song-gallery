@@ -13,7 +13,9 @@ const SAMPLE = 12; // 12x12 px es suficiente para un promedio estable
 /** Sube la luminosidad hasta que el color sirva de acento sobre fondo oscuro. */
 function ensureReadable(r, g, b) {
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-  if (luminance >= 0.55) return [r, g, b];
+  // Siempre enteros: con decimales, rgbToHex armaba un hex invalido y la
+  // historia para Instagram perdia el color de la portada.
+  if (luminance >= 0.55) return [r, g, b].map(Math.round);
   const boost = Math.min(2.6, 0.62 / Math.max(luminance, 0.06));
   return [r, g, b].map((channel) => Math.min(255, Math.round(channel * boost)));
 }
