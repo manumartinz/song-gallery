@@ -54,7 +54,15 @@ export function toEntries(list) {
   return list
     .map((item) => {
       const id = parsePlaylistRef(item.ref);
-      return id ? { id, label: item.label || 'Playlist', ref: item.ref, sort: item.sort } : null;
+      return id
+        ? {
+            id,
+            label: item.label || 'Playlist',
+            ref: item.ref,
+            sort: item.sort,
+            recommend: Boolean(item.recommend),
+          }
+        : null;
     })
     .filter(Boolean);
 }

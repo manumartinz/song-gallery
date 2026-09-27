@@ -1070,6 +1070,7 @@ body.is-dragging-body * {
 
 .intro__actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--gap-sm);
 }
@@ -1158,6 +1159,14 @@ body.is-dragging-body * {
 .shuffle:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* "Recomendar una canción", en la cabecera de la playlist de recomendaciones:
+   la pastilla de "Al azar" sin el giro, que en una nota musical no dice nada. */
+.shuffle.rec__intro:hover:not(:disabled) svg,
+.shuffle.rec__intro:active:not(:disabled) svg {
+  transform: none;
+  animation: none;
 }
 
 @keyframes spin {
@@ -2238,6 +2247,23 @@ body.is-dragging-body * {
 .state__button:hover {
   background: var(--bone);
   color: var(--ink);
+}
+
+/* Con icono (el de recomendar, en una playlist vacía): alineado y a escala. */
+.state__button:has(svg) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.state__button svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .skeleton {

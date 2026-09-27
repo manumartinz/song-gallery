@@ -13,8 +13,15 @@ import { trackEvent } from '../lib/clarity.js';
  *
  * Pregunta primero si el servidor lo tiene encendido (necesita Redis): si no,
  * no pinta nada y el pie queda como estaba.
+ *
+ * `className` y `children` cambian el botón y no el formulario: el pie lo
+ * pinta a su manera y la cabecera de la playlist de recomendaciones, como una
+ * pastilla más al lado de "Al azar".
  */
-export default function Recommend() {
+export default function Recommend({
+  className = 'foot__action rec__open',
+  children = 'Recomendame una canción',
+}) {
   const [enabled, setEnabled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -36,7 +43,7 @@ export default function Recommend() {
     <>
       <button
         type="button"
-        className="foot__action rec__open"
+        className={className}
         onClick={() => {
           trackEvent('recommend_open');
           setOpen(true);
@@ -47,7 +54,7 @@ export default function Recommend() {
           <circle cx="6.5" cy="18" r="2.5" />
           <circle cx="16.5" cy="16" r="2.5" />
         </svg>
-        Recomendame una canción
+        <span>{children}</span>
       </button>
       {/* En un portal: dentro del pie quedaria atrapado en el contexto de apilamiento
           de la pagina, por debajo de la barra de arriba. */}

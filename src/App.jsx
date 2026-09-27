@@ -3,6 +3,7 @@ import Backdrop from './components/Backdrop.jsx';
 import Cover from './components/Cover.jsx';
 import EndCard from './components/EndCard.jsx';
 import Footer from './components/Footer.jsx';
+import Recommend from './components/RecommendForm.jsx';
 import MiniPlayer from './components/MiniPlayer.jsx';
 import PlayGlyph from './components/PlayGlyph.jsx';
 import Quiz from './components/Quiz.jsx';
@@ -19,7 +20,7 @@ import Toast from './components/Toast.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
-import { EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
+import { EmptySource, EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
 import { dropPlaylistCache, fetchMineSources, parsePlaylistRef } from './lib/api.js';
 import { tag, trackEvent } from './lib/clarity.js';
 import isHardReload from './lib/hardReload.js';
@@ -189,6 +190,11 @@ export default function App() {
         : Infinity,
     [entries, currentId, isAlbum],
   );
+
+  // La playlist de recomendaciones lleva en la cabecera el botón para sumar una.
+  const isRecsPlaylist =
+    currentKind === 'playlist' &&
+    Boolean(fixedEntries.find((entry) => entry.id === currentId)?.recommend);
 
   // Fin de tema -> avanza. Va por ref porque `skip` se define mas abajo.
   const endedRef = useRef(null);
@@ -1198,6 +1204,14 @@ export default function App() {
                         </svg>
                         <span>Al azar</span>
                       </button>
+
+                      {/* La playlist que arman quienes escuchan invita a sumar
+                          una, ahí mismo y no solo al pie. */}
+                      {isRecsPlaylist ? (
+                        <Recommend className="shuffle rec__intro">
+                          Recomendar una canción
+                        </Recommend>
+                      ) : null}
                     </div>
                   </div>
 
@@ -1240,7 +1254,11 @@ export default function App() {
                   aparece en la barra superior. */}
               <div ref={sentinelRef} className="sentinel" aria-hidden="true" />
 
-              {visible.length === 0 ? (
+              {tracks.length === 0 ? (
+                /* Vacía de verdad, no filtrada: "Nada coincide" con un botón
+                   de limpiar la búsqueda no tendría sentido. */
+                <EmptySource recommend={isRecsPlaylist} />
+              ) : visible.length === 0 ? (
                 <NoMatches
                   query={query}
                   filtered={hasFacets(facets)}

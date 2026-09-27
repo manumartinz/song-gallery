@@ -18,9 +18,20 @@
  * claves de SORTS (`original`, `year`, `added`, `artist`). Sin él abre en
  * `original`, que es el orden tal cual viene de Spotify. Entra en el mismo
  * sentido que si pulsaras el botón: las fechas, de lo último a lo primero.
+ *
+ * `recommend` es opcional: pone en la cabecera de esa playlist el botón que abre
+ * el formulario de "Recomendame una".
  */
 export const PLAYLISTS = [
   { label: 'lately', ref: 'https://open.spotify.com/playlist/7wVdbtC5ELxWO2QNWz4RN1' },
   { label: 'show up', ref: 'https://open.spotify.com/playlist/3tCIRspolGNY9rj5pMaDbc' },
   { label: 'trip up', ref: 'https://open.spotify.com/playlist/6O285yjCB4RTJzDadCI93P', sort: 'added' },
+  /* La que arman quienes escuchan: lo que me recomendaron y aprobé en /admin.
+     `recommend` le pone en la cabecera el botón para recomendar una más. */
+  {
+    label: 'me recomendaron',
+    ref: 'https://open.spotify.com/playlist/0wgbLuyur2g2Tb6SvViaUc',
+    sort: 'added',
+    recommend: true,
+  },
 ];

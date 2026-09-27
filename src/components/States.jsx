@@ -1,4 +1,5 @@
 /** Estados de carga, error y arranque en vacio. */
+import Recommend from './RecommendForm.jsx';
 
 export function LoadingList() {
   return (
@@ -32,6 +33,30 @@ export function ErrorState({ message, onRetry }) {
           <button type="button" className="state__button" onClick={onRetry}>
             Reintentar
           </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * La fuente cargó pero no tiene canciones. En la de recomendaciones es lo
+ * normal al principio, y ahí el vacío es una invitación, no un error.
+ */
+export function EmptySource({ recommend = false }) {
+  return (
+    <div className="state">
+      <h2 className="state__title">
+        {recommend ? 'Todavía no hay ninguna' : 'Esta playlist está vacía'}
+      </h2>
+      <p className="state__body">
+        {recommend
+          ? 'Acá van las canciones que me recomiendan quienes pasan por acá y que me gustaron. Podés ser de los primeros.'
+          : 'Spotify no devolvió ninguna canción para esta playlist.'}
+      </p>
+      {recommend ? (
+        <div className="state__form">
+          <Recommend className="state__button">Recomendar una canción</Recommend>
         </div>
       ) : null}
     </div>
