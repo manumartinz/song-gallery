@@ -119,6 +119,17 @@ La ficha de cada canción tiene un «Compartir» que manda el link de esta web c
 la canción abierta (`?p=…&t=…`), no el de Spotify. En el celu abre la hoja de
 compartir del sistema; en la compu copia el link y avisa abajo.
 
+## Historia para Instagram
+
+La ficha y la vista «Ahora suena» tienen «Historia para Instagram»:
+`/api/story` dibuja una imagen de 1080×1920 con la portada, el título, la nota
+y la dirección de la web, con un degradado del color de la portada (la web se
+lo pasa en `?c=`, porque en el edge no hay canvas para sacarlo). En el celu
+va a la hoja de compartir, donde aparece Instagram; en la compu se descarga.
+Safari pide que la hoja se abra justo después de un toque, y la imagen tarda un
+par de segundos en dibujarse: si la rechaza, la imagen queda lista y el
+segundo toque la comparte al instante.
+
 ## Tarjeta al compartir
 
 Los rastreadores (WhatsApp, Twitter, Slack…) no ejecutan JavaScript, así que

@@ -23,7 +23,7 @@ import { tag, trackEvent } from './lib/clarity.js';
 import isHardReload from './lib/hardReload.js';
 import { facetOptions, hasFacets, makeFacetFilter, NO_FACETS } from './lib/facets.js';
 import { makeFilter, SORTS } from './lib/search.js';
-import { shareLink, trackUrl } from './lib/share.js';
+import { shareLink, shareStory, trackUrl } from './lib/share.js';
 import {
   ALBUM_ENTRIES,
   CUSTOM_TRACKS,
@@ -503,6 +503,22 @@ export default function App() {
   const [toast, notify] = useToast();
 
   /** Comparte el enlace a una cancion de la fuente abierta. */
+  /* Historia para Instagram. La imagen se dibuja en el servidor y tarda un
+     par de segundos: se avisa antes para que el toque no parezca perdido. */
+  const handleStory = useCallback(
+    async (index) => {
+      const track = tracks[index];
+      if (!track) return;
+      trackEvent('story');
+      notify('Preparando la imagen…');
+      const result = await shareStory({ kind: currentKind, id: currentId }, track);
+      if (result === 'downloaded') notify('Imagen descargada: subila a tu historia');
+      else if (result === 'failed') notify('No se pudo preparar la imagen');
+      else if (result === 'retry') notify('Imagen lista: tocá de nuevo para compartirla');
+    },
+    [tracks, currentKind, currentId, notify],
+  );
+
   const handleShare = useCallback(
     async (index) => {
       const track = tracks[index];
@@ -928,6 +944,7 @@ export default function App() {
     onHover: handleHover,
     onSeek: seek,
     onShare: handleShare,
+    onStory: handleStory,
     onExpand: openNow,
     onPointerDown,
   };
@@ -1189,6 +1206,7 @@ export default function App() {
           onPrev={() => skip(-1)}
           onNext={() => skip(1)}
           onShare={() => handleShare(playingIndex)}
+          onStory={() => handleStory(playingIndex)}
           onClose={closeNow}
         />
       ) : null}

@@ -43,6 +43,7 @@ function TrackRow({
   onHover,
   onSeek,
   onShare,
+  onStory,
   onExpand,
 }) {
   const setNode = useCallback((node) => register(index, node), [register, index]);
@@ -258,6 +259,19 @@ function TrackRow({
                 }}
               >
                 Compartir
+              </button>
+            ) : null}
+
+            {onStory ? (
+              <button
+                type="button"
+                className="tag--link"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onStory(index);
+                }}
+              >
+                Historia para Instagram
               </button>
             ) : null}
           </div>

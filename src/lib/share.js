@@ -65,3 +65,65 @@ export async function shareLink({ title, text, url }) {
   }
   return (await copy(url)) ? 'copied' : 'failed';
 }
+
+/** "rgb(176, 145, 90)" -> "b0915a". Lo que no sea un rgb() da null. */
+export function rgbToHex(value) {
+  const match = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(value || '');
+  if (!match) return null;
+  return match
+    .slice(1, 4)
+    .map((channel) => Number(channel).toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Imagen vertical de una cancion para historias de Instagram.
+ *
+ * En el movil va a la hoja de compartir como archivo, que es donde aparece
+ * Instagram; donde no se pueden compartir archivos (la compu, casi siempre) se
+ * descarga. Devuelve 'shared' | 'downloaded' | 'retry' | 'cancelled' | 'failed'.
+ *
+ * 'retry' es cosa de Safari: la hoja de compartir exige un toque reciente, y
+ * dibujar la imagen tarda un par de segundos. Si la rechaza por eso, la imagen
+ * queda guardada y el segundo toque la comparte al instante.
+ */
+const storyFiles = new Map(); // url -> File, las ya dibujadas en esta visita
+
+export async function shareStory({ kind, id }, track) {
+  const url = new URL('/api/story', location.origin);
+  url.searchParams.set(kind === 'album' ? 'a' : 'p', id);
+  url.searchParams.set('t', track.id);
+  const accent = rgbToHex(getComputedStyle(document.documentElement).getPropertyValue('--accent'));
+  if (accent) url.searchParams.set('c', accent);
+
+  let blob;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return 'failed';
+    blob = await response.blob();
+  } catch {
+    return 'failed';
+  }
+
+  const name = `${track.title}`.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'cancion';
+  const file = new File([blob], `${name}.png`, { type: 'image/png' });
+
+  if (prefersNativeShare() && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: `${track.title} — ${track.artistLine}` });
+      return 'shared';
+    } catch (error) {
+      if (error?.name === 'AbortError') return 'cancelled';
+      if (error?.name === 'NotAllowedError') return 'retry';
+    }
+  }
+
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(file);
+  link.download = file.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
+  return 'downloaded';
+}
