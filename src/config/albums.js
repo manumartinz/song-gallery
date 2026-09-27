@@ -34,7 +34,7 @@ export const ALBUMS = [
      disco, así que va el disco. */
   { label: 'The New Abnormal', ref: 'https://open.spotify.com/album/2xkZV2Hl1Omi8rk2D7t5lN' },
   { label: 'Man on the Moon II', ref: 'https://open.spotify.com/album/08eM9GRdr5BCCHNqS3Wwud' },
-  { label: 'Future Present Past', ref: 'https://open.spotify.com/album/1SQjs5LxCj7J5WIZYg3h1D' },
+  { label: 'Lux', ref: 'https://open.spotify.com/album/3SUEJULSGgBDG1j4GQhfYY' },
   { label: 'Born to Die', ref: 'https://open.spotify.com/album/5VoeRuTrGhTbKelUfwymwu' },
   { label: "La Síntesis O'Konor", ref: 'https://open.spotify.com/album/7oEJJ7TxrfWGJXczcuOWpK' },
   {
