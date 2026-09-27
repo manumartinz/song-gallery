@@ -134,6 +134,8 @@ export default function SourceRail({
   if (compact) return null;
 
   const showAlbums = hasAlbums && tab === 'album';
+  const regular = entries.filter((entry) => !entry.recommend);
+  const together = entries.filter((entry) => entry.recommend);
 
   /* Las dos caras van montadas a la vez y apiladas en la misma celda: el riel
      mide lo que la mas alta y no cambia al alternar, asi que el switch no se
@@ -146,25 +148,43 @@ export default function SourceRail({
 
   return (
     <nav className="rail" ref={rootRef} aria-label="Playlists y álbumes">
+      {/* El switch y su aviso comparten caja: el globo apunta al switch, que
+          es lo que explica, y no a media altura de todo el riel. */}
       {hasAlbums ? (
-        <div className="rail__switch" role="group" aria-label="Qué lista ver" data-tab={tab}>
-          {/* La pastilla encendida es una sola pieza que se desliza de una cara
-              a la otra, en vez de apagarse en un boton y encenderse en el otro. */}
-          <span className="rail__switch-thumb" aria-hidden="true" />
-          {[
-            ['playlist', 'Playlists'],
-            ['album', 'Álbumes'],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              className={`rail__switch-btn${tab === key ? ' rail__switch-btn--on' : ''}`}
-              onClick={() => setTab(key)}
-              aria-pressed={tab === key}
-            >
-              {label}
-            </button>
-          ))}
+        <div className="rail__top">
+          <div className="rail__switch" role="group" aria-label="Qué lista ver" data-tab={tab}>
+            {/* La pastilla encendida es una sola pieza que se desliza de una cara
+                a la otra, en vez de apagarse en un boton y encenderse en el otro. */}
+            <span className="rail__switch-thumb" aria-hidden="true" />
+            {[
+              ['playlist', 'Playlists'],
+              ['album', 'Álbumes'],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`rail__switch-btn${tab === key ? ' rail__switch-btn--on' : ''}`}
+                onClick={() => setTab(key)}
+                aria-pressed={tab === key}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {hintOn ? (
+            <p className="rail__hint" role="status">
+              Cambiá entre playlists y álbumes
+              <button
+                type="button"
+                className="rail__hint-close"
+                onClick={() => setHintOn(false)}
+                aria-label="Entendido"
+              >
+                &times;
+              </button>
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -218,7 +238,7 @@ export default function SourceRail({
               );
             })}
 
-            {entries.map((entry) => {
+            {regular.map((entry) => {
               /* Las pegadas nacen sin nombre y lo reciben cuando contesta
                  Spotify. Mientras tanto hace falta algo que poner. */
               const label = entry.label || 'Playlist';
@@ -255,23 +275,27 @@ export default function SourceRail({
             <li className="rail__add">
               <AddPlaylistForm adding={adding} setAdding={setAdding} onSubmit={onSubmit} />
             </li>
+
+            {/* La que arman quienes escuchan, aparte y al final: no es una
+                selección mía como las de arriba. */}
+            {together.map((entry) => {
+              const on = entry.id === activePlaylistId;
+              return (
+                <li key={entry.id} className="rail__apart">
+                  <button
+                    type="button"
+                    className={`rail__item${on ? ' rail__item--on' : ''}`}
+                    onClick={() => onSelectPlaylist(entry.id)}
+                    aria-current={on ? 'true' : undefined}
+                  >
+                    {entry.label}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
-
-      {hintOn ? (
-        <p className="rail__hint" role="status">
-          Cambiá entre playlists y álbumes
-          <button
-            type="button"
-            className="rail__hint-close"
-            onClick={() => setHintOn(false)}
-            aria-label="Entendido"
-          >
-            &times;
-          </button>
-        </p>
-      ) : null}
     </nav>
   );
 }

@@ -204,7 +204,7 @@ export default function PlaylistMenu({
               no dice nada que no diga ya el boton. */}
           {albums.length ? <p className="menu__section">Mis playlists favoritas</p> : null}
 
-          {entries.map((entry) => {
+          {entries.filter((entry) => !entry.recommend).map((entry) => {
             /* Las pegadas nacen sin nombre y lo reciben cuando contesta
                Spotify. Mientras tanto hace falta algo que poner. */
             const label = entry.label || 'Playlist';
@@ -244,6 +244,26 @@ export default function PlaylistMenu({
             onSubmit={onSubmit}
             onDone={() => setOpen(false)}
           />
+
+          {/* La que arman quienes escuchan, aparte y después del alta, igual
+              que en el riel: no es una selección mía como las de arriba. */}
+          {entries
+            .filter((entry) => entry.recommend)
+            .map((entry) => {
+              const on = entry.id === activeId;
+              return (
+                <span className="menu__item menu__apart" key={entry.id}>
+                  <button
+                    type="button"
+                    className={`menu__tab${on ? ' menu__tab--on' : ''}`}
+                    onClick={() => choose(entry)}
+                    aria-current={on ? 'true' : undefined}
+                  >
+                    <span className="menu__label">{entry.label}</span>
+                  </button>
+                </span>
+              );
+            })}
 
           {albums.length ? (
             <>

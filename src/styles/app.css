@@ -254,11 +254,19 @@ body.is-dragging-body * {
    resto del riel: la cara encendida se rellena y la otra queda en tono bajo.
    Las dos caras miden igual (1fr 1fr) para que el relleno pueda deslizarse de
    una a otra con un simple `translateX(100%)`. */
+/* El switch y su aviso: la caja mide lo que el switch, y el globo cuelga de
+   ella, así que siempre apunta al switch y no a media altura del riel. */
+.rail__top {
+  position: relative;
+  display: inline-block;
+  margin: 0 0 var(--gap-sm);
+}
+
 .rail__switch {
   position: relative;
   display: inline-grid;
   grid-template-columns: 1fr 1fr;
-  margin: 0 0 var(--gap-sm);
+  margin: 0;
   padding: 2px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -388,6 +396,14 @@ body.is-dragging-body * {
   min-width: 0;
 }
 
+/* "me recomendaron", aparte: una raya la separa de mis playlists. En la tira es
+   vertical, en la misma fila; en el riel flotante, horizontal, encima. */
+.rail__apart {
+  margin-left: var(--gap-xs);
+  padding-left: var(--gap-md);
+  border-left: 1px solid var(--line-strong);
+}
+
 .rail__row:hover .menu__drop,
 .rail__row:focus-within .menu__drop {
   opacity: 1;
@@ -461,12 +477,12 @@ body.is-dragging-body * {
 }
 
 /* Aviso de primera visita. Mismo globo que el del menu de playlists —opaco,
-   redondo y con su punta—, pero colgando de los rotulos. En la tira del flujo
-   cae debajo, con la punta hacia arriba. */
+   redondo y con su punta—, pero colgando del switch (`.rail__top`). En la
+   tira del flujo cae debajo, con la punta hacia arriba. */
 .rail__hint {
   position: absolute;
-  top: calc(100% + 0.2rem);
-  left: var(--shell-x);
+  top: calc(100% + 0.5rem);
+  left: 0;
   z-index: 4; /* sobre la barra (3), por debajo del mini (5) */
   display: flex;
   align-items: center;
@@ -538,6 +554,13 @@ body.is-dragging-body * {
     gap: var(--gap-sm);
   }
 
+  .rail__apart {
+    margin: var(--gap-xs) 0 0;
+    padding: var(--gap-sm) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line-strong);
+  }
+
   /* Todo lo que se pulsa recupera los clicks que la caja deja pasar. */
   .rail__switch,
   .rail__row .menu__drop,
@@ -560,8 +583,8 @@ body.is-dragging-body * {
     max-width: 100%;
   }
 
-  /* Flotando, el globo no cabe debajo —la columna ya esta centrada a lo alto—,
-     asi que sale AL LADO, con la punta mirando a los rotulos. */
+  /* Flotando, el globo no cabe debajo —taparia los rotulos—, asi que sale AL
+     LADO del switch, a su altura, con la punta mirandolo. */
   .rail__hint {
     pointer-events: auto;
     top: 50%;
@@ -3702,6 +3725,13 @@ body.is-now .rail {
     align-items: center;
     justify-content: space-between;
     gap: var(--gap-sm);
+  }
+
+  /* "me recomendaron", separada de mis playlists por una raya, como en el riel. */
+  .menu__panel .menu__apart {
+    margin-top: var(--gap-xs);
+    padding-top: var(--gap-xs);
+    border-top: 1px solid var(--line);
   }
 
   /* Encabezado de cada bloque del panel: playlists arriba, albumes debajo. Solo
