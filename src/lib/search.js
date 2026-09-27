@@ -1,3 +1,5 @@
+import { noteFor } from '../config/notes.js';
+
 /** Normaliza para comparar: minusculas, sin acentos, sin puntuacion. */
 function normalize(text) {
   return String(text ?? '')
@@ -17,7 +19,7 @@ function haystack(track) {
   let value = haystacks.get(track);
   if (value === undefined) {
     value = normalize(
-      [track.title, track.artistLine, track.album, track.year, track.genre]
+      [track.title, track.artistLine, track.album, track.year, track.genre, noteFor(track.id)]
         .filter(Boolean)
         .join(' '),
     );

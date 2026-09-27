@@ -92,6 +92,15 @@ Se comparten con `?a=`, igual que las playlists con `?p=`. Los dos son
 excluyentes: al cambiar de una cosa a otra se borra el parámetro que sobra, o al
 recargar volvería lo que se acaba de dejar.
 
+## Notas
+
+Cada canción puede llevar una nota mía: por qué está, de dónde me viene. Se
+escriben en `src/config/notes.js`, por id de pista de Spotify (el del link de
+la canción, o el `?t=` de esta web cuando suena), así que la nota la acompaña
+en cualquier playlist o álbum. Sale arriba de su ficha, y la fila lleva unas
+comillas para que se note que hay algo que leer. El buscador también mira las
+notas.
+
 ## Desplegar
 
 Vercel. Las variables `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` van en los

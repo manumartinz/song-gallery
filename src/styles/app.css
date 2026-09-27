@@ -1479,6 +1479,33 @@ body.is-dragging-body * {
   opacity: 1;
 }
 
+/* La nota personal. En caja baja y con medida de lectura, como la nota del
+   pie: es la unica frase corrida de la ficha y compite mal con las etiquetas
+   en versalitas. El filete toma el acento de la portada que suena. */
+.row__note {
+  margin: var(--gap-md) 0 0;
+  padding: 0.1rem 0 0.1rem var(--gap-md);
+  max-width: 60ch;
+  border-left: 2px solid var(--accent);
+  font-size: clamp(0.92rem, 1.5vw, 1.05rem);
+  line-height: 1.55;
+  color: var(--text);
+  text-wrap: pretty;
+  opacity: 0;
+  transition: opacity var(--dur-mid) var(--ease-out) 80ms;
+}
+
+.row--open .row__note {
+  opacity: 1;
+}
+
+.row__noted {
+  margin-right: 0.35rem;
+  font-size: 1.1em;
+  line-height: 0;
+  color: var(--accent);
+}
+
 .tag {
   display: inline-flex;
   align-items: center;

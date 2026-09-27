@@ -4,6 +4,7 @@ import EqBars from './EqBars.jsx';
 import PlayGlyph from './PlayGlyph.jsx';
 import Scrubber from './Scrubber.jsx';
 import SplitTitle from './SplitTitle.jsx';
+import { noteFor } from '../config/notes.js';
 import { capitalize, formatDuration, formatFollowers, formatReleaseDate } from '../lib/format.js';
 
 /**
@@ -47,6 +48,7 @@ function TrackRow({
 
   const releaseLabel = formatReleaseDate(track.releaseDate);
   const followers = formatFollowers(track.followers);
+  const note = noteFor(track.id);
 
   const glyph =
     playable || pending ? (
@@ -116,7 +118,16 @@ function TrackRow({
         <h2 className="row__title">
           <SplitTitle text={track.title} animate={isCurrent} />
         </h2>
-        <p className="row__artist">{track.artistLine}</p>
+        <p className="row__artist">
+          {/* Marca discreta de que la ficha trae algo mio: sin ella, quien no
+              abre filas nunca se enteraria de que hay notas. */}
+          {note ? (
+            <span className="row__noted" title="Tiene una nota" aria-label="Tiene una nota">
+              &ldquo;
+            </span>
+          ) : null}
+          {track.artistLine}
+        </p>
       </div>
 
       <span className="row__time">
@@ -126,6 +137,10 @@ function TrackRow({
       {/* Ficha completa: solo la cancion que suena. */}
       <div className="row__reveal">
         <div>
+          {/* Lo primero de la ficha, antes que los datos: es lo unico que no
+              esta en Spotify. */}
+          {note ? <blockquote className="row__note">{note}</blockquote> : null}
+
           <div className="row__details">
             {/* En un album, decir el album en cada ficha es decir lo que ya
                 pone el titulo de la pagina catorce veces. */}
