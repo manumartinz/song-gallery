@@ -220,6 +220,18 @@ function TrackRow({
               </a>
             ) : null}
 
+            {/* Para quien no usa Spotify: song.link resuelve la misma cancion en
+                Apple Music, YouTube, Tidal, Deezer y el resto a partir del id. */}
+            <a
+              className="tag--link"
+              href={`https://song.link/s/${track.id}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(event) => event.stopPropagation()}
+            >
+              Otras plataformas
+            </a>
+
             {onShare ? (
               <button
                 type="button"
