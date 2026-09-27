@@ -1,6 +1,7 @@
 import Cover from './Cover.jsx';
 import PlayGlyph from './PlayGlyph.jsx';
 import Scrubber from './Scrubber.jsx';
+import useSwipe from '../hooks/useSwipe.js';
 
 /**
  * Barra fija con lo que esta sonando.
@@ -14,6 +15,9 @@ import Scrubber from './Scrubber.jsx';
  * veces por segundo: pasarla como prop obligaria a re-renderizar App y la lista
  * entera a esa frecuencia, que es justo el atasco que costo quitar. Asi el
  * unico que se repinta es el Scrubber.
+ *
+ * En tactil se desliza: a la izquierda la siguiente, a la derecha la anterior
+ * y hacia arriba la vista grande, como en cualquier reproductor del movil.
  */
 export default function MiniPlayer({
   track,
@@ -30,17 +34,31 @@ export default function MiniPlayer({
   onRadio,
   onExpand,
 }) {
+  const { handlers, followRef, swiped } = useSwipe({
+    onLeft: onNext,
+    onRight: onPrev,
+    onUp: onExpand,
+  });
+
   if (!track) return null;
 
   // Oculto no debe ser alcanzable con el tabulador ni por el lector de pantalla.
   const reachable = shown ? 0 : -1;
 
   return (
-    <div className={`mini${shown ? ' mini--in' : ''}`} aria-hidden={shown ? undefined : 'true'}>
+    <div
+      className={`mini${shown ? ' mini--in' : ''}`}
+      aria-hidden={shown ? undefined : 'true'}
+      {...handlers}
+    >
       <button
+        ref={followRef}
         type="button"
         className="mini__id"
-        onClick={onFocusRow}
+        onClick={() => {
+          // El click que sigue a un gesto no es un toque.
+          if (!swiped()) onFocusRow();
+        }}
         tabIndex={reachable}
         aria-label={`Ir a ${track.title}, de ${track.artistLine}`}
       >
