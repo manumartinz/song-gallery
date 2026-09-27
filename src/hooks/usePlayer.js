@@ -246,7 +246,17 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
         }
       };
 
-      engine.fade = { raf: requestAnimationFrame(step), fromIndex, toIndex, fromOwner };
+      engine.fade = { raf: 0, fromIndex, toIndex, fromOwner };
+
+      /* Con la pestaña oculta el navegador congela requestAnimationFrame: el
+         fundido no avanzaba nunca, la pista nueva sonaba a volumen 0 hasta
+         terminar y la lista seguia avanzando en silencio. Oculta (o sin
+         fundido) el cambio es instantaneo. */
+      if (fadeMs <= 0 || document.hidden) {
+        settleFade(engine);
+        return;
+      }
+      engine.fade.raf = requestAnimationFrame(step);
     },
     [fadeMs, settleFade],
   );
@@ -497,6 +507,16 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [publishPosition]);
+
+  /* Si la pestaña se oculta a mitad de un fundido, se liquida ya: sus cuadros
+     no van a llegar hasta que alguien vuelva a mirarla. */
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) settleFade(engineRef.current);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [settleFade]);
 
   // Fin de tema -> avisa para que la lista avance sola.
   useEffect(() => {
