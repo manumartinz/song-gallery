@@ -765,6 +765,8 @@ export default function App() {
   useKeyboard((event) => {
     // No robar teclas mientras se escribe o se ajusta la barra.
     if (event.target.closest?.('input, textarea, [role="slider"]')) return;
+    // Con un modal abierto, el teclado es suyo.
+    if (document.body.classList.contains('is-modal')) return;
 
     /* `?` abre y cierra la ayuda. Con ella abierta no se mueve nada por
        debajo: el foco esta en el panel y lo que se pulse es para el. */

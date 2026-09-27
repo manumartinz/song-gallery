@@ -173,8 +173,8 @@ marcó, y un límite por IP guardado en el propio Redis frena el abuso.
 
 ## Recomendame una
 
-Al pie, debajo de la nota que invita a recomendar, hay un formulario para que
-quien escucha me deje una canción (un link o «canción — artista»), su nombre y
+Al pie, debajo de la nota que invita a recomendar, hay un botón que abre en un
+modal un formulario para que quien escucha me deje una canción (un link o «canción — artista»), su nombre y
 algo más si quiere. Va al mismo Redis que las reacciones, a una lista `recs`
 con las 2000 más recientes, y se leen con `npm run recs` (toma las variables
 de `.env.local`; en Vercel se bajan con `vercel env pull`). Límite de cinco
