@@ -17,8 +17,9 @@
       rastreadores NO resuelven rutas relativas ni ejecutan JavaScript. Si el
       dominio cambia, son estas tres líneas.
 
-      Por lo mismo, la tarjeta es siempre la misma independientemente de la
-      playlist: variarla exigiría generar el HTML en el servidor.
+      Esta es la tarjeta de la web en general. Para los enlaces a una playlist,
+      un disco o una canción, `middleware.js` reescribe estas mismas etiquetas
+      cuando quien pide la página es un rastreador.
 
       La imagen la dibuja `api/og.js` y se cachea un año en el edge, así que
       redibujarla no basta: hay que subir el `?v=` de `og:image` o el edge y los

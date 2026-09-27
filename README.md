@@ -119,6 +119,16 @@ La ficha de cada canción tiene un «Compartir» que manda el link de esta web c
 la canción abierta (`?p=…&t=…`), no el de Spotify. En el celu abre la hoja de
 compartir del sistema; en la compu copia el link y avisa abajo.
 
+## Tarjeta al compartir
+
+Los rastreadores (WhatsApp, Twitter, Slack…) no ejecutan JavaScript, así que
+hasta ahora cualquier enlace enseñaba la misma tarjeta con la firma. Ahora
+`middleware.js` mira si quien pide la página es uno de ellos y si el enlace
+lleva `?p=`, `?a=` o `?t=`; en ese caso le devuelve el mismo `index.html`
+con el título, la descripción (la nota de la canción, si la tiene) y una imagen
+de `/api/og` con la portada. A una persona no la toca. Lo que se cuenta de cada
+enlace se decide en `api/_share.js`.
+
 ## Notas
 
 Cada canción puede llevar una nota mía: por qué está, de dónde me viene. Se
