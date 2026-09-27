@@ -31,6 +31,7 @@ import {
 } from './lib/sources.js';
 import useAccentColor from './hooks/useAccentColor.js';
 import useDragScroll from './hooks/useDragScroll.js';
+import useHeard from './hooks/useHeard.js';
 import useKeyboard from './hooks/useKeyboard.js';
 import useMediaSession from './hooks/useMediaSession.js';
 import usePlaybackFailures from './hooks/usePlaybackFailures.js';
@@ -44,6 +45,7 @@ import useUrlSync from './hooks/useUrlSync.js';
 
 const VIEW_KEY = 'song-gallery:view';
 const INTRO_KEY = 'song-gallery:intro-seen'; // lo escribe Splash; aqui solo se consulta
+const HEARD_AFTER_MS = 10_000;
 
 /** Una tecla sola, sin modificadores: los atajos del navegador van por delante. */
 function bare(event) {
@@ -306,6 +308,25 @@ export default function App() {
     const next = findPlayable(playingIndex, 1);
     if (next !== -1) preload(tracks[next]?.previewUrl);
   }, [playingIndex, findPlayable, tracks, preload]);
+
+  /* ---------- Escuchadas ---------- */
+
+  /* Cuenta como escuchada a los diez segundos de sonar, no al darle al play:
+     saltar de una en una buscando algo no es haberlas escuchado. Pausar
+     reinicia la cuenta, que es lo honesto con un fragmento de treinta. */
+  const [heard, markHeard] = useHeard();
+  const playingId = currentTrack?.id ?? null;
+
+  useEffect(() => {
+    if (!playingId || !player.isPlaying) return undefined;
+    const timer = setTimeout(() => markHeard(playingId), HEARD_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, [playingId, player.isPlaying, markHeard]);
+
+  const heardCount = useMemo(
+    () => tracks.reduce((n, track) => n + (heard.has(track.id) ? 1 : 0), 0),
+    [tracks, heard],
+  );
 
   /* ---------- URL ---------- */
 
@@ -698,6 +719,7 @@ export default function App() {
     selectedIndex,
     isPlayable,
     isPending,
+    heard,
     isPlaying: player.isPlaying,
     subscribePosition: player.subscribePosition,
     duration: player.duration,
@@ -834,6 +856,9 @@ export default function App() {
 
                   <p className="intro__meta">
                     {data.trackCount} canciones &middot; {playableCount} con preview
+                    {/* Solo cuando ya hay algo: "0 escuchadas" a quien acaba de
+                        llegar suena a reproche. */}
+                    {heardCount ? ` · ${heardCount} ${heardCount === 1 ? 'escuchada' : 'escuchadas'}` : ''}
                     {/* Un album no trae descripcion, pero si año y sello, que es
                         lo que uno mira de un disco. */}
                     {isAlbum && data.year ? ` · ${data.year}` : ''}

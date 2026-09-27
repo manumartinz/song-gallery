@@ -61,6 +61,7 @@ function GridCell({
   isPlaying,
   playable,
   pending,
+  heard,
   slot,
   subscribePosition,
   duration,
@@ -78,6 +79,7 @@ function GridCell({
     isFocused ? 'cell--focused' : '',
     playable || pending ? '' : 'cell--dead',
     mosaic ? 'cell--piece' : '',
+    heard ? 'cell--heard' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -161,6 +163,7 @@ export default function TrackGrid({
   playingIndex,
   isPlayable,
   isPending,
+  heard,
   isPlaying,
   subscribePosition,
   duration,
@@ -208,6 +211,7 @@ export default function TrackGrid({
             isCurrent={isCurrent}
             playable={isPlayable(index)}
             pending={isPending(index)}
+            heard={heard?.has(track.id) ?? false}
             isPlaying={isPlaying}
             subscribePosition={subscribePosition}
             duration={isCurrent ? duration : 0}

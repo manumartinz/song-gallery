@@ -1500,6 +1500,37 @@ body.is-dragging-body * {
   opacity: 1;
 }
 
+/* Ya escuchada: un punto en la esquina de la portada, o junto al numero en un
+   album, donde no hay portada. Discreto a proposito: es un "por aqui ya
+   pasaste", no un logro. */
+.row--heard .row__art::after,
+.row--album.row--heard .row__index::after,
+.cell--heard .cell__hit::before {
+  content: '';
+  position: absolute;
+  top: 0.3rem;
+  left: 0.3rem;
+  z-index: 2;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--bone);
+  box-shadow: 0 0 0 2px rgba(7, 7, 10, 0.55);
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.row--album.row--heard .row__index {
+  position: relative;
+}
+
+.row--album.row--heard .row__index::after {
+  top: 0.1rem;
+  left: -0.7rem;
+  box-shadow: none;
+  opacity: 0.45;
+}
+
 .row__noted {
   margin-right: 0.35rem;
   font-size: 1.1em;

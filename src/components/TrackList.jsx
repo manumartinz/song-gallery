@@ -14,6 +14,7 @@ export default function TrackList({
   selectedIndex,
   isPlayable,
   isPending,
+  heard,
   isPlaying,
   subscribePosition,
   duration,
@@ -41,6 +42,7 @@ export default function TrackList({
             isPlaying={isPlaying}
             playable={isPlayable(index)}
             pending={isPending(index)}
+            heard={heard?.has(track.id) ?? false}
             /* La posicion ya no baja por aqui: la barra se suscribe al
                reproductor. Este prop es una funcion estable, asi que el memo
                de las filas sigue aguantando. */

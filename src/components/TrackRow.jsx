@@ -35,6 +35,7 @@ function TrackRow({
   isPlaying,
   playable,
   pending,
+  heard,
   subscribePosition,
   duration,
   register,
@@ -67,6 +68,7 @@ function TrackRow({
     // Pendiente no es lo mismo que sin preview: no debe verse apagada.
     playable || pending ? '' : 'row--dead',
     pending ? 'row--pending' : '',
+    heard ? 'row--heard' : '',
   ]
     .filter(Boolean)
     .join(' ');
