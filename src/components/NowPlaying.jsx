@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { noteFor } from '../config/notes.js';
 import Cover from './Cover.jsx';
 import PlayGlyph from './PlayGlyph.jsx';
+import Reactions from './Reactions.jsx';
 import Scrubber from './Scrubber.jsx';
 import Visualizer from './Visualizer.jsx';
 
@@ -25,6 +26,7 @@ export default function NowPlaying({
   onNext,
   onShare,
   onStory,
+  reactions,
   onClose,
 }) {
   const closeRef = useRef(null);
@@ -116,6 +118,15 @@ export default function NowPlaying({
             </svg>
           </button>
         </div>
+
+        {reactions ? (
+          <Reactions
+            id={track.id}
+            counts={reactions.counts[track.id]}
+            mine={reactions.mine}
+            onToggle={reactions.toggle}
+          />
+        ) : null}
 
         <div className="now__extras">
           {onShare ? (

@@ -43,6 +43,7 @@ import useKeyboard from './hooks/useKeyboard.js';
 import useMediaSession from './hooks/useMediaSession.js';
 import usePlaybackFailures from './hooks/usePlaybackFailures.js';
 import usePlayer from './hooks/usePlayer.js';
+import useReactions from './hooks/useReactions.js';
 import useReducedMotion from './hooks/useReducedMotion.js';
 import useRowRegistry from './hooks/useRowRegistry.js';
 import useSourceData from './hooks/useSourceData.js';
@@ -507,6 +508,10 @@ export default function App() {
 
   const [toast, notify] = useToast();
   const listening = useNowListening();
+
+  // Reacciones de las canciones abiertas. Apagadas si el servidor no tiene Redis.
+  const trackIds = useMemo(() => tracks.map((track) => track.id), [tracks]);
+  const reactions = useReactions(trackIds);
 
   /** Comparte el enlace a una cancion de la fuente abierta. */
   /* Historia para Instagram. La imagen se dibuja en el servidor y tarda un
@@ -1004,6 +1009,7 @@ export default function App() {
     onSeek: seek,
     onShare: handleShare,
     onStory: handleStory,
+    reactions: reactions.enabled ? reactions : null,
     onExpand: openNow,
     onPointerDown,
   };
@@ -1280,6 +1286,7 @@ export default function App() {
           onNext={() => skip(1)}
           onShare={() => handleShare(playingIndex)}
           onStory={() => handleStory(playingIndex)}
+          reactions={reactions.enabled ? reactions : null}
           onClose={closeNow}
         />
       ) : null}

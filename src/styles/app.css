@@ -3824,3 +3824,69 @@ body.is-now .rail {
   font-weight: 400;
   color: var(--text-muted);
 }
+
+/* ---------- Reacciones ---------- */
+
+.reactions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* En la ficha van arriba de los datos y hay que devolverles el puntero: la
+   fila entera es un boton y sus hijos lo tienen desactivado. */
+.row__reactions {
+  margin-top: var(--gap-md);
+}
+
+.row .reaction {
+  pointer-events: auto;
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast),
+    transform var(--dur-fast);
+}
+
+.reaction:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.reaction:active {
+  transform: scale(0.95);
+}
+
+.reaction svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.reaction--on,
+.reaction--on:hover {
+  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.reaction--on svg {
+  fill: currentColor;
+}
+
+.reaction__count {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}

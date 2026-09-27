@@ -1,5 +1,12 @@
 import TrackRow from './TrackRow.jsx';
 
+const NONE = {};
+
+/** Las reacciones propias de una pista como cadena: estable entre renders. */
+function mineFor(mine, id) {
+  return ['love', 'new'].filter((kind) => mine.has(`${id}:${kind}`)).join(',');
+}
+
 /**
  * `items` viene ya filtrado y ordenado: cada entrada trae la pista y su indice
  * ORIGINAL en la playlist, que es la identidad con la que trabaja todo el
@@ -24,6 +31,7 @@ export default function TrackList({
   onSeek,
   onShare,
   onStory,
+  reactions,
   onExpand,
   onPointerDown,
 }) {
@@ -56,6 +64,11 @@ export default function TrackList({
             onSeek={onSeek}
             onShare={onShare}
             onStory={onStory}
+            /* Por fila y no el objeto entero: asi una reaccion solo repinta la
+               fila que la recibe, y el memo de las demas aguanta. */
+            reaction={reactions ? reactions.counts[track.id] || NONE : null}
+            reacted={reactions ? mineFor(reactions.mine, track.id) : ''}
+            onReact={reactions ? reactions.toggle : null}
             onExpand={isCurrent ? onExpand : null}
           />
         );

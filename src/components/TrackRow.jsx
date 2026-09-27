@@ -2,6 +2,7 @@ import { memo, useCallback } from 'react';
 import Cover from './Cover.jsx';
 import EqBars from './EqBars.jsx';
 import PlayGlyph from './PlayGlyph.jsx';
+import Reactions from './Reactions.jsx';
 import Scrubber from './Scrubber.jsx';
 import SplitTitle from './SplitTitle.jsx';
 import { noteFor } from '../config/notes.js';
@@ -45,6 +46,9 @@ function TrackRow({
   onShare,
   onStory,
   onExpand,
+  reaction,
+  reacted = '',
+  onReact,
 }) {
   const setNode = useCallback((node) => register(index, node), [register, index]);
   const handleClick = useCallback(() => onSelect(index), [onSelect, index]);
@@ -145,6 +149,16 @@ function TrackRow({
           {/* Lo primero de la ficha, antes que los datos: es lo unico que no
               esta en Spotify. */}
           {note ? <blockquote className="row__note">{note}</blockquote> : null}
+
+          {onReact ? (
+            <Reactions
+              id={track.id}
+              counts={reaction}
+              mine={new Set(reacted ? reacted.split(',').map((kind) => `${track.id}:${kind}`) : [])}
+              onToggle={onReact}
+              className="row__reactions"
+            />
+          ) : null}
 
           <div className="row__details">
             {/* En un album, decir el album en cada ficha es decir lo que ya

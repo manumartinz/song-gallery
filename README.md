@@ -159,6 +159,16 @@ en cualquier playlist o álbum. Sale arriba de su ficha, y la fila lleva unas
 comillas para que se note que hay algo que leer. El buscador también mira las
 notas.
 
+## Reacciones
+
+En la ficha y en «Ahora suena» hay un corazón y un «No la conocía», con su
+cuenta. El segundo es el que me importa: dice qué descubre la gente. Se guardan
+en un Redis de Upstash (`api/_kv.js`, por su API REST y sin dependencias); en
+Vercel se conecta desde Storage → Marketplace → Upstash, que crea
+`KV_REST_API_URL` y `KV_REST_API_TOKEN`. Sin esas variables el GET responde
+204 y los botones no aparecen. No hay cuentas: cada navegador recuerda lo que
+marcó, y un límite por IP guardado en el propio Redis frena el abuso.
+
 ## Lo que estoy escuchando
 
 Bajo la cabecera puede salir lo que suena en mi Spotify en ese momento, o lo
