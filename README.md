@@ -159,6 +159,20 @@ en cualquier playlist o álbum. Sale arriba de su ficha, y la fila lleva unas
 comillas para que se note que hay algo que leer. El buscador también mira las
 notas.
 
+## Lo que estoy escuchando
+
+Bajo la cabecera puede salir lo que suena en mi Spotify en ese momento, o lo
+último que escuché. Es el único endpoint (`/api/now`) que habla con mi cuenta
+y no con el catálogo, así que necesita un refresh token mío:
+
+1. En el dashboard de Spotify, en la app del proyecto, añadir como Redirect URI
+   `http://127.0.0.1:8888/callback`.
+2. `npm run spotify-token`, abrir el enlace y aceptar.
+3. Poner el `SPOTIFY_REFRESH_TOKEN` que imprime en `.env.local` y en Vercel.
+
+Sin la variable el endpoint responde 204 y la web no enseña nada. Sólo sale
+título, artista, portada y enlace: nada del dispositivo ni del contexto.
+
 ## Desplegar
 
 Vercel. Las variables `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` van en los

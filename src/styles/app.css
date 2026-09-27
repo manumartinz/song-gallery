@@ -3755,3 +3755,72 @@ body.is-now .rail {
     transform: none;
   }
 }
+
+/* ---------- Lo que estoy escuchando ---------- */
+
+/* Una linea discreta bajo la cabecera: es un guiño, no una seccion. */
+.listening {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 100%;
+  margin-top: var(--gap-md);
+  padding: 0.35rem 0.8rem 0.35rem 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-decoration: none;
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.listening:hover {
+  border-color: var(--line-strong);
+  background: rgba(244, 241, 234, 0.04);
+}
+
+.listening__art {
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.listening--live .listening__art {
+  animation: spin 9s linear infinite;
+}
+
+.listening__text {
+  display: grid;
+  min-width: 0;
+}
+
+.listening__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.58rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.listening__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #7ed6a2;
+  animation: pending-pulse 1.6s var(--ease-in-out) infinite;
+}
+
+.listening__track {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.listening__artist {
+  font-weight: 400;
+  color: var(--text-muted);
+}

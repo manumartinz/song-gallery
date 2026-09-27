@@ -11,6 +11,7 @@ import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
 import TrackList from './components/TrackList.jsx';
 import MoreOnSpotify from './components/MoreOnSpotify.jsx';
+import NowListening, { useNowListening } from './components/NowListening.jsx';
 import NowPlaying from './components/NowPlaying.jsx';
 import ShortcutsPanel from './components/ShortcutsPanel.jsx';
 import SourceRail from './components/SourceRail.jsx';
@@ -505,6 +506,7 @@ export default function App() {
   const handleHover = useCallback((index) => setHoverIndex(index), []);
 
   const [toast, notify] = useToast();
+  const listening = useNowListening();
 
   /** Comparte el enlace a una cancion de la fuente abierta. */
   /* Historia para Instagram. La imagen se dibuja en el servidor y tarda un
@@ -1160,6 +1162,8 @@ export default function App() {
                     {isAlbum && data.label ? ` · ${data.label}` : ''}
                     {data.description ? ` — ${data.description}` : ''}
                   </p>
+
+                  <NowListening now={listening} />
                 </div>
               </div>
 
