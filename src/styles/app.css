@@ -11,6 +11,13 @@
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
+  /* En pantallas anchas todo un 10% más chico: así se veía mejor con el zoom
+     del navegador al 90%. Por la base y no con `zoom`: casi todo va en rem y
+     escala junto, mientras que `zoom` achicaba también lo que ocupa la
+     pantalla entera (el saludo, la vista grande) y descuadraba las
+     coordenadas del arrastre y la barra de avance. En el teléfono no: ahí el
+     texto y los blancos para el dedo no sobran. */
+  font-size: 100%;
   /* Barra de scroll oculta: se navega con rueda, teclado y arrastre. El
      cursor de agarre compensa la falta de indicador de posicion. */
   scrollbar-width: none;
@@ -18,6 +25,13 @@ html {
 
 html::-webkit-scrollbar {
   display: none;
+}
+
+/* El mismo corte que el menú desplegable: por encima, escritorio. */
+@media (min-width: 721px) {
+  html {
+    font-size: 90%;
+  }
 }
 
 body {
