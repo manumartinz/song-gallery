@@ -60,6 +60,8 @@ function RecommendModal({ onClose }) {
   const [status, setStatus] = useState('idle'); // idle | sending | sent | error
   const [error, setError] = useState(null);
   const firstRef = useRef(null);
+  // Cuándo se abrió: el servidor descarta envíos más rápidos que una persona.
+  const openedAt = useRef(Date.now());
   const doneRef = useRef(null);
 
   useEffect(() => {
@@ -91,7 +93,10 @@ function RecommendModal({ onClose }) {
       const response = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(Object.fromEntries(form)),
+        body: JSON.stringify({
+          ...Object.fromEntries(form),
+          elapsed: Date.now() - openedAt.current,
+        }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'No se pudo enviar.');
@@ -130,16 +135,14 @@ function RecommendModal({ onClose }) {
           </div>
         ) : (
           <>
-            <h2 id="rec-title" className="modal__title">
-              Recomendame una
-            </h2>
-            <p className="modal__text">
-              Una canción que te guste y creas que me puede gustar. La escucho, prometido.
-            </p>
-
             <form className="rec" onSubmit={submit}>
-              <label className="rec__field rec__field--wide">
-                <span>La canción</span>
+              <label className="rec__field rec__field--wide rec__field--lead">
+                {/* Es la pregunta del modal: hace de titulo, y el lector de
+                    pantalla lo anuncia como tal. */}
+                <span id="rec-title">
+                  Recomendame una canción que te guste, que tengas dando vueltas o que simplemente
+                  pienses que me puede gustar
+                </span>
                 <input
                   ref={firstRef}
                   name="song"
@@ -151,8 +154,14 @@ function RecommendModal({ onClose }) {
                 />
               </label>
               <label className="rec__field rec__field--wide">
-                <span>Tu nombre (si querés)</span>
-                <input name="name" maxLength={60} autoComplete="given-name" />
+                <span>Tu nombre (así sé quién sos)</span>
+                <input
+                  name="name"
+                  required
+                  minLength={2}
+                  maxLength={60}
+                  autoComplete="given-name"
+                />
               </label>
               <label className="rec__field rec__field--wide">
                 <span>Algo que quieras contarme (si querés)</span>

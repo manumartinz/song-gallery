@@ -1,0 +1,67 @@
+/**
+ * Validación de una recomendación, sin red ni Redis: se prueba sola.
+ *
+ * Devuelve una de tres cosas:
+ *   { ok: true, entry, fingerprint }  -> se guarda
+ *   { ok: false, error }              -> se le explica a la persona (400)
+ *   { ok: false, silent: true }       -> parece un bot: se le dice que sí y
+ *                                        no se guarda nada, para no enseñarle
+ *                                        qué lo delató
+ */
+
+export const LIMITS = { song: 200, name: 60, message: 400 };
+/* Una persona tarda más que esto en leer el modal y escribir una canción y su
+   nombre. Un script que rellena y envía, no. */
+export const MIN_FILL_MS = 3000;
+const MAX_LINKS = 2;
+
+function clean(value, max) {
+  return String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
+}
+
+const countLinks = (text) => (text.match(/https?:\/\/|www\./gi) || []).length;
+
+/** Para reconocer la misma canción mandada otra vez con otra ortografía. */
+export function normalizeSong(song) {
+  return song
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/\?.*$/, '') // el ?si= de los links de Spotify cambia en cada copia
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
+
+export function checkRecommendation(body = {}) {
+  // Trampas para bots: el campo invisible y la velocidad de relleno.
+  if (body.website) return { ok: false, silent: true };
+  const elapsed = Number(body.elapsed);
+  if (!Number.isFinite(elapsed) || elapsed < MIN_FILL_MS) return { ok: false, silent: true };
+
+  const song = clean(body.song, LIMITS.song);
+  const name = clean(body.name, LIMITS.name);
+  const message = clean(body.message, LIMITS.message) || null;
+
+  if (song.length < 3) return { ok: false, error: 'Poné el link o el nombre de la canción.' };
+  if (name.length < 2) return { ok: false, error: 'Poné tu nombre, así sé quién sos.' };
+
+  const all = [song, name, message || ''].join(' ');
+  if (/<[a-z/!]/i.test(all)) return { ok: false, error: 'Sin etiquetas HTML, por favor.' };
+  if (countLinks(name)) return { ok: false, error: 'El nombre no puede ser un link.' };
+  if (countLinks(all) > MAX_LINKS) {
+    return { ok: false, error: 'Demasiados links. Con el de la canción alcanza.' };
+  }
+  // Un mismo carácter veinte veces seguidas es teclado aporreado o relleno.
+  if (/(.)\1{19,}/.test(all)) return { ok: false, error: 'Eso no parece una canción.' };
+
+  return {
+    ok: true,
+    entry: { song, name, message, at: new Date().toISOString() },
+    fingerprint: normalizeSong(song),
+  };
+}

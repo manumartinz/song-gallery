@@ -189,11 +189,26 @@ marcó, y un límite por IP guardado en el propio Redis frena el abuso.
 ## Recomendame una
 
 Al pie, debajo de la nota que invita a recomendar, hay un botón que abre en un
-modal un formulario para que quien escucha me deje una canción (un link o «canción — artista»), su nombre y
-algo más si quiere. Va al mismo Redis que las reacciones, a una lista `recs`
-con las 2000 más recientes, y se leen con `npm run recs` (toma las variables
-de `.env.local`; en Vercel se bajan con `vercel env pull`). Límite de cinco
-por hora e IP y un campo trampa para bots. Sin Redis, el formulario no sale.
+modal un formulario para que quien escucha me deje una canción (un link o
+«canción — artista»), su nombre, que es obligatorio, y un mensaje si quiere.
+Va al mismo Redis que las reacciones, a una lista `recs` con las 2000 más
+recientes, y se leen con `npm run recs` (toma las variables de `.env.local`).
+Sin Redis, el botón no sale.
+
+Es lo único que escribe texto libre de desconocidos, así que va con capas
+(`api/recommend.js` y `api/_recommendation.js`):
+
+- Sólo desde la propia web y en JSON: un formulario de otro sitio no puede
+  postear.
+- Trampas para bots: un campo invisible y un mínimo de tres segundos entre
+  abrir el modal y enviar. A un bot se le contesta que sí y no se guarda nada.
+- Validación: largos máximos, nombre obligatorio y que no sea un link, sin HTML,
+  como mucho dos links en total.
+- Límites en Redis: 3 por hora y 8 por día por IP, y 150 por día en total.
+  Ese último es el techo de lo que puede crecer la lista aunque lleguen desde
+  muchas IPs, y cuando se alcanza queda en los logs.
+- La misma canción dos veces en un día (con otro `?si=` u otra ortografía)
+  cuenta una.
 
 ## Lo que estoy escuchando
 
