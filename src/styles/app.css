@@ -1913,6 +1913,59 @@ body.is-dragging-body * {
   transform: scale(1.08);
 }
 
+/* Me gusta de la cuadricula. En la esquina contraria al distintivo de la que
+   suena, y encima del punto de "ya escuchada", que tapa mientras se ve. Solo
+   aparece al acercarse, en la que suena o si ya le diste: veinte corazones
+   vacios encima de las portadas serian ruido. */
+.cell__love {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  background: rgba(7, 7, 10, 0.78);
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-hover) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.cell:hover .cell__love,
+.cell--focused .cell__love,
+.cell--current .cell__love,
+.cell--loved .cell__love,
+.cell__love:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cell__love:active {
+  transform: scale(0.9);
+}
+
+.cell__love svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.cell--loved .cell__love {
+  color: var(--accent);
+}
+
+.cell--loved .cell__love svg {
+  fill: currentColor;
+}
+
 .cell__progress {
   position: absolute;
   left: 0;
@@ -3399,8 +3452,13 @@ body.is-now .rail {
 /* ---------- Movil ---------- */
 
 @media (max-width: 720px) {
+  /* La primera columna con suelo: sin el, la de la derecha (menu, volumen y
+     vista) se lo comia todo en un movil de 360 y el titulo pegajoso se pintaba
+     ENCIMA de los controles. Lo que no cabe lo cede el boton del menu, que se
+     recorta. */
   .topbar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(4.5rem, 1fr) minmax(0, auto);
+    column-gap: var(--gap-sm);
     row-gap: var(--gap-sm);
   }
 
@@ -3450,7 +3508,10 @@ body.is-now .rail {
     grid-row: 1;
     grid-column: 1;
     justify-self: start;
-    max-width: 60vw;
+    /* De su celda y no de la pantalla: con 60vw un nombre largo se salia de
+       la columna y tapaba el volumen y el conmutador de vista. */
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* En una sola fila: con el menu reducido a un boton ya no hace falta apilar,
@@ -3477,13 +3538,18 @@ body.is-now .rail {
        Puesto al final, su borde derecho ya es el de la barra y el panel tiene
        todo el ancho para crecer. */
     order: 1;
+    /* Es lo unico de la fila que puede encogerse: volumen y vista son `flex:
+       none`. */
+    min-width: 0;
+    flex-wrap: nowrap;
   }
 
   .menu__trigger {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    max-width: 42vw;
+    min-width: 0;
+    max-width: min(42vw, 100%);
     padding: 0.32rem 0.6rem 0.32rem 0.75rem;
     border: 1px solid var(--line);
     border-radius: 999px;
@@ -3785,6 +3851,26 @@ body.is-now .rail {
   .cell--focused .cell__hit img {
     filter: brightness(0.66) saturate(0.85);
     transform: none;
+  }
+
+  /* El foco se queda pegado tras un tap: aqui el corazon solo sale en la que
+     suena, que es la que se acaba de tocar, o en las que ya tienen el tuyo. */
+  .cell--focused .cell__love {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .cell--current .cell__love,
+  .cell--loved .cell__love {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* 25 px se ven bien pero se aciertan mal con el dedo. */
+  .cell__love::after {
+    content: '';
+    position: absolute;
+    inset: -0.45rem;
   }
 }
 

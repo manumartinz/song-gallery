@@ -68,6 +68,9 @@ function GridCell({
   register,
   onSelect,
   onHover,
+  love = 0,
+  loved = false,
+  onReact,
 }) {
   const setNode = useCallback((node) => register(index, node), [register, index]);
   const handleClick = useCallback(() => onSelect(index), [onSelect, index]);
@@ -80,6 +83,7 @@ function GridCell({
     playable || pending ? '' : 'cell--dead',
     mosaic ? 'cell--piece' : '',
     heard ? 'cell--heard' : '',
+    loved ? 'cell--loved' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -141,6 +145,29 @@ function GridCell({
           <CellProgress subscribePosition={subscribePosition} duration={duration} />
         ) : null}
       </button>
+
+      {/* Fuera del boton de la celda: un boton dentro de otro es HTML invalido.
+          Solo el corazon; "No la conocía" no cabe en ~100 px y sigue en la
+          lista y en la vista grande. */}
+      {onReact ? (
+        <button
+          type="button"
+          className="cell__love"
+          data-no-drag
+          onClick={() => onReact(track.id, 'love')}
+          /* Enter y Espacio son del manejador global (reproducir): aqui son
+             del corazon. */
+          onKeyDown={(event) => {
+            if (event.key === ' ' || event.key === 'Enter') event.stopPropagation();
+          }}
+          aria-pressed={loved}
+          aria-label={`Me gustó ${track.title}${love ? ` (${love})` : ''}`}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+          </svg>
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -171,6 +198,7 @@ export default function TrackGrid({
   onSelect,
   onHover,
   onPointerDown,
+  reactions,
   moreCount = 0,
   moreUrl = null,
 }) {
@@ -218,6 +246,10 @@ export default function TrackGrid({
             register={register}
             onSelect={onSelect}
             onHover={onHover}
+            /* Primitivos y no el objeto: una reaccion solo repinta su celda. */
+            love={reactions?.counts[track.id]?.love || 0}
+            loved={reactions?.mine.has(`${track.id}:love`) ?? false}
+            onReact={reactions ? reactions.toggle : null}
           />
         );
       })}
