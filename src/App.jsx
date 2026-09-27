@@ -30,6 +30,7 @@ import {
 import useAccentColor from './hooks/useAccentColor.js';
 import useDragScroll from './hooks/useDragScroll.js';
 import useKeyboard from './hooks/useKeyboard.js';
+import useMediaSession from './hooks/useMediaSession.js';
 import usePlaybackFailures from './hooks/usePlaybackFailures.js';
 import usePlayer from './hooks/usePlayer.js';
 import useReducedMotion from './hooks/useReducedMotion.js';
@@ -382,19 +383,23 @@ export default function App() {
 
   /* ---------- Metadatos para los controles del sistema ---------- */
 
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !currentTrack) return;
-
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentTrack.title,
-      artist: currentTrack.artistLine,
-      album: currentTrack.album || '',
-      artwork: currentTrack.art?.lg
-        ? [{ src: currentTrack.art.lg, sizes: '640x640', type: 'image/jpeg' }]
-        : [],
-    });
-    navigator.mediaSession.playbackState = player.isPlaying ? 'playing' : 'paused';
-  }, [currentTrack, player.isPlaying]);
+  /* Play y pausa van por separado y no a un toggle: el sistema dice lo que
+     quiere, y si ya esta asi no hay que darle la vuelta. */
+  useMediaSession({
+    track: currentTrack,
+    isPlaying: player.isPlaying,
+    duration: player.duration,
+    getPosition,
+    onPlay: () => {
+      if (!player.isPlaying) toggle();
+    },
+    onPause: () => {
+      if (player.isPlaying) toggle();
+    },
+    onPrev: () => skip(-1),
+    onNext: () => skip(1),
+    onSeek: seek,
+  });
 
   /* ---------- Interaccion ---------- */
 
