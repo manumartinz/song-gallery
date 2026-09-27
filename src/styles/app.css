@@ -1021,6 +1021,52 @@ body.is-dragging-body * {
   line-height: 1.5;
 }
 
+.intro__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+/* Reproducir: el principal, lleno. Hasta ahora la unica invitacion a tocar
+   algo era el hint de abajo, y "Al azar" en contorno parecia secundario de
+   algo que no estaba. */
+.play-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+  padding: 0.42rem 1.05rem 0.42rem 0.85rem;
+  border: 1px solid var(--bone);
+  border-radius: 999px;
+  background: var(--bone);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+}
+
+.play-all svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: currentColor;
+}
+
+.play-all:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.play-all:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.play-all:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Boton de aleatorio */
 .shuffle {
   display: inline-flex;

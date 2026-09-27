@@ -3,6 +3,7 @@ import Backdrop from './components/Backdrop.jsx';
 import Cover from './components/Cover.jsx';
 import Footer from './components/Footer.jsx';
 import MiniPlayer from './components/MiniPlayer.jsx';
+import PlayGlyph from './components/PlayGlyph.jsx';
 import PlaylistMenu from './components/PlaylistMenu.jsx';
 import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
@@ -516,6 +517,21 @@ export default function App() {
     startTrack(pool[Math.floor(Math.random() * pool.length)]);
   }, [visible, isPlayable, playingIndex, startTrack]);
 
+  /* El boton principal de la cabecera. Con algo sonando pausa y reanuda; sin
+     nada, arranca por la primera que se pueda oir en el orden que se ve, que
+     es lo que uno espera de un "reproducir" delante de una lista. */
+  const handlePlayAll = useCallback(() => {
+    setTouched(true);
+    if (playingIndex !== -1) {
+      toggle();
+      return;
+    }
+    const first = findPlayable(-1, 1);
+    if (first === -1) return;
+    trackEvent('play_all');
+    startTrack(first);
+  }, [playingIndex, toggle, findPlayable, startTrack]);
+
   usePlaybackFailures({
     player,
     retriedKeys,
@@ -864,26 +880,46 @@ export default function App() {
                   <div className="intro__head">
                     <h1 className="intro__title">{data.name}</h1>
 
-                    <button
-                      type="button"
-                      className="shuffle"
-                      onClick={handleRandom}
-                      disabled={!playableCount}
-                      aria-label="Reproducir una canción al azar"
-                    >
-                      <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M3 7h4l3.5 5L7 17H3M21 7h-4l-7 10H3" />
-                        <path d="M18 4l3 3-3 3M18 14l3 3-3 3" />
-                      </svg>
-                      <span>Al azar</span>
-                    </button>
+                    <div className="intro__actions">
+                      <button
+                        type="button"
+                        className="play-all"
+                        onClick={handlePlayAll}
+                        disabled={!playableCount}
+                      >
+                        <PlayGlyph playing={player.isPlaying} />
+                        <span>
+                          {player.isPlaying
+                            ? 'Pausar'
+                            : playingIndex !== -1
+                              ? 'Seguir'
+                              : 'Reproducir'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="shuffle"
+                        onClick={handleRandom}
+                        disabled={!playableCount}
+                        aria-label="Reproducir una canción al azar"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                          <path d="M3 7h4l3.5 5L7 17H3M21 7h-4l-7 10H3" />
+                          <path d="M18 4l3 3-3 3M18 14l3 3-3 3" />
+                        </svg>
+                        <span>Al azar</span>
+                      </button>
+                    </div>
                   </div>
 
                   <p className="intro__meta">
                     {data.trackCount} canciones &middot; {playableCount} con preview
                     {/* Solo cuando ya hay algo: "0 escuchadas" a quien acaba de
                         llegar suena a reproche. */}
-                    {heardCount ? ` · ${heardCount} ${heardCount === 1 ? 'escuchada' : 'escuchadas'}` : ''}
+                    {heardCount
+                      ? ` · ${heardCount} ${heardCount === 1 ? 'escuchada' : 'escuchadas'}`
+                      : ''}
                     {/* Un album no trae descripcion, pero si año y sello, que es
                         lo que uno mira de un disco. */}
                     {isAlbum && data.year ? ` · ${data.year}` : ''}
