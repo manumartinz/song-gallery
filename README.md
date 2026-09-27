@@ -76,7 +76,8 @@ ellos y ocupan margen que de otro modo está muerto. El corte está en 1320 px,
 que es cuando ese margen da de sí; por debajo pasan al flujo, como una tira
 encima de las canciones.
 
-En móvil no están: por debajo de 720 px van dentro del desplegable de la barra,
+En móvil no están: por debajo de 720 px van dentro del desplegable de la barra
+—que se abre como una hoja desde abajo, al alcance del pulgar—,
 en su propio bloque bajo las playlists, y el botón pasa a decir lo que suena sea
 de la clase que sea. Once nombres en mayúsculas eran siete líneas y se comían el
 tercio de arriba de la pantalla antes de que asomara una canción — el mismo

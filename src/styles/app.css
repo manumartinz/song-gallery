@@ -3280,37 +3280,71 @@ body.is-now .rail {
     transform: rotate(180deg);
   }
 
+  /* Panel inferior: sube desde abajo, a lo ancho, al alcance del pulgar. Antes
+     colgaba del boton de arriba a la derecha, que es justo la esquina a la que
+     peor llega una mano sujetando el telefono. Por encima del mini (5) y por
+     debajo de la vista grande (8). */
   .menu__panel {
-    position: absolute;
-    top: calc(100% + 0.45rem);
+    position: fixed;
+    left: 0;
     right: 0;
-    z-index: 4; /* sobre la barra (3), por debajo del mini (5) */
+    bottom: 0;
+    z-index: 7;
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: var(--gap-xs);
-    min-width: max(11rem, 44vw);
-    max-width: 78vw;
-    /* Cuelga de una barra `sticky`, asi que lo que se saliese del viewport
-       quedaba inalcanzable: no hay scroll de pagina que lo rescate. Se scrollea
-       el panel, y `contain` evita que al llegar al final siga la lista de
-       debajo. */
-    max-height: min(60vh, 22rem);
+    gap: 0.15rem;
+    /* Mismo motivo que antes: cuelga de una barra `sticky` y lo que no quepa
+       se desplaza dentro del panel, con `contain` para no arrastrar la lista
+       de debajo al llegar al final. */
+    max-height: min(72vh, 34rem);
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: var(--gap-sm);
-    border: 1px solid var(--line);
-    border-radius: 10px;
+    padding: 0.6rem var(--shell-x) calc(var(--gap-md) + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line-strong);
+    border-radius: 18px 18px 0 0;
     /* Opaco, no translucido: esta sobre la lista, que se desplaza por debajo. */
-    background: rgba(12, 12, 16, 0.98);
-    animation: menu-drop var(--dur-fast) var(--ease-out);
+    background: rgba(12, 12, 16, 0.99);
+    animation: sheet-up var(--dur-mid) var(--ease-out);
   }
 
-  @keyframes menu-drop {
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+  }
+
+  /* La barra (3) y el `.shell` que la contiene (1) crean cada uno su propio
+     contexto: sin subirlos, el velo y la hoja no pasarian de ahi y el mini (5)
+     quedaria por encima de la hoja. Solo mientras esta abierta. */
+  .shell:has(.menu__panel),
+  .topbar:has(.menu__panel) {
+    z-index: 7;
+  }
+
+  .menu__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    background: rgba(7, 7, 10, 0.6);
+    animation: fade-scrim var(--dur-mid) var(--ease-out);
+  }
+
+  @keyframes fade-scrim {
     from {
       opacity: 0;
-      transform: translateY(-6px);
     }
+  }
+
+  /* El asa: dice "esto es una hoja" sin palabras. */
+  .menu__grip {
+    align-self: center;
+    flex: none;
+    width: 2.4rem;
+    height: 4px;
+    margin-bottom: var(--gap-sm);
+    border-radius: 2px;
+    background: var(--line-strong);
   }
 
   /* Dentro del panel las pestañas son filas, no una tira horizontal. */
@@ -3340,11 +3374,15 @@ body.is-now .rail {
     margin-top: var(--gap-sm);
   }
 
+  /* Filas de 44 px como minimo: es lo que pide un dedo. */
   .menu__panel .menu__tab {
     flex: 1;
     min-width: 0;
+    min-height: 2.75rem;
     padding: 0.5rem 0.2rem;
+    font-size: 0.8rem;
     text-align: left;
+    align-items: center;
   }
 
   /* Como fila hay sitio de sobra: el nombre entero antes que los puntitos. */
@@ -3356,9 +3394,9 @@ body.is-now .rail {
      que la saque. */
   .menu__panel .menu__drop {
     opacity: 1;
-    width: 1.5rem;
-    height: 1.5rem;
-    font-size: 0.95rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 1.1rem;
   }
 
   /* El subrayado animado se disenio para pestañas en linea; aqui estorba. */
@@ -3427,6 +3465,30 @@ body.is-now .rail {
 
 /* El hover no existe en tactil: evita estados pegados tras un tap. */
 @media (hover: none) {
+  /* Zona de toque de 44 px sin agrandar lo que se ve: la barra de arriba no
+     tiene sitio para botones mas grandes, pero el dedo si necesita el
+     margen. Un pseudo-elemento invisible alrededor de cada boton lo da. */
+  .views__btn,
+  .vol__btn,
+  .menu__trigger,
+  .mini__controls button {
+    position: relative;
+  }
+
+  .views__btn::after,
+  .vol__btn::after,
+  .menu__trigger::after,
+  .mini__controls button::after {
+    content: '';
+    position: absolute;
+    inset: -0.5rem -0.25rem;
+  }
+
+  .mini__controls button {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
   /* Sin esto el aspa de las playlists pegadas seria inalcanzable con el dedo:
      solo aparece con el hover, que aqui no llega nunca. */
   .menu__drop {

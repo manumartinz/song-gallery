@@ -160,8 +160,16 @@ export default function PlaylistMenu({
         </svg>
       </button>
 
+      {/* En movil el panel sube desde abajo, al alcance del pulgar, sobre un
+          velo que lo cierra al tocarlo. El velo vive dentro del <nav> para que
+          el cierre por toque fuera no lo cuente como fuera. */}
+      {open ? (
+        <div className="menu__scrim" onClick={() => setOpen(false)} aria-hidden="true" />
+      ) : null}
+
       {open ? (
         <div className="menu__panel">
+          <span className="menu__grip" aria-hidden="true" />
           {/* Los encabezados solo cuando hay dos bloques que separar: con la
               lista de albumes vacia, poner "Playlists" encima de las playlists
               no dice nada que no diga ya el boton. */}
@@ -234,7 +242,9 @@ export default function PlaylistMenu({
       {showHint ? (
         <p className="menu__hint" role="status">
           {/* Si no hay albumes vuelve a hablar solo de lo que hay. */}
-          {albums.length ? 'Tocá para cambiar de playlist o álbum' : 'Tocá para cambiar de playlist'}
+          {albums.length
+            ? 'Tocá para cambiar de playlist o álbum'
+            : 'Tocá para cambiar de playlist'}
           <button
             type="button"
             className="menu__hint-close"
