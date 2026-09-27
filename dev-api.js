@@ -4,6 +4,10 @@
  * En produccion Vercel ejecuta cada archivo de /api como una funcion serverless.
  * Este plugin replica ese contrato en local (req.query, res.status().json())
  * para no depender de `vercel dev`. Solo actua en desarrollo.
+ *
+ * Las funciones edge (`export const config = { runtime: 'edge' }`) tienen otro
+ * contrato: reciben un Request y devuelven un Response. Tambien se sirven, con
+ * la respuesta volcada tal cual sobre la de Node.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -59,6 +63,18 @@ export default function devApi() {
           if (!mod) {
             mod = await import(`${pathToFileURL(file).href}?t=${mtimeMs}`);
             moduleCache.set(file, { mtimeMs, mod });
+          }
+
+          if (mod.config?.runtime === 'edge') {
+            const request = new Request(new URL(req.url, `http://${req.headers.host}`), {
+              method: req.method,
+              headers: req.headers,
+            });
+            const response = await mod.default(request);
+            res.statusCode = response.status;
+            response.headers.forEach((value, key) => res.setHeader(key, value));
+            res.end(Buffer.from(await response.arrayBuffer()));
+            return;
           }
 
           req.query = Object.fromEntries(url.searchParams);

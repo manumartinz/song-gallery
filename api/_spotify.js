@@ -66,7 +66,9 @@ async function requestToken() {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString('base64')}`,
+      /* btoa y no Buffer: este cliente tambien lo usan funciones edge (la
+         tarjeta al compartir), donde Buffer no existe. */
+      Authorization: `Basic ${btoa(`${id}:${secret}`)}`,
     },
     body: 'grant_type=client_credentials',
   });
