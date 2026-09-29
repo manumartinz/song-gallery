@@ -146,7 +146,25 @@ export const MINE_ENTRIES = MINE.map(({ id, label }) => ({ id, label }));
 /* El parametro de la URL de cada clase de fuente. Son excluyentes: la URL
    lleva siempre uno solo. Lo leen la carga, la barra de direcciones, los
    enlaces al compartir y la canonica, y tienen que decir lo mismo. */
-export const SOURCE_PARAMS = { playlist: 'p', album: 'a', me: 'm' };
+export const SOURCE_PARAMS = { playlist: 'p', album: 'a', me: 'm', mood: 'mood' };
+
+/* La búsqueda por ánimo. Lo que escribe la persona es la frase, y aquí solo se
+   descarta lo evidente: la valida de verdad /api/mood. Lo que viaja en
+   `?mood=` no es la frase sino el id de la selección que armó la IA, para que
+   un link compartido abra exactamente esa. */
+export const MOOD_MAX = 80;
+export function cleanMoodQuery(value) {
+  const q = String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MOOD_MAX);
+  return q.length >= 3 ? q : null;
+}
+
+export function parseMoodRef(value) {
+  const id = String(value ?? '').trim();
+  return /^[a-z0-9]{10}$/.test(id) ? id : null;
+}
 
 export function paramFor(kind) {
   return SOURCE_PARAMS[kind] || SOURCE_PARAMS.playlist;
@@ -174,6 +192,9 @@ export function readInitialSource(
      su mensaje, que es mas honesto que caer en otra fuente sin decir nada. */
   const mine = parseMineRef(params.get('m'));
   if (mine) return { kind: 'me', id: mine };
+
+  const mood = parseMoodRef(params.get('mood'));
+  if (mood) return { kind: 'mood', id: mood };
 
   const first = [...playlists, ...custom][0];
   if (first) return { kind: 'playlist', id: first.id };

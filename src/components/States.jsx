@@ -43,7 +43,17 @@ export function ErrorState({ message, onRetry }) {
  * La fuente cargó pero no tiene canciones. En la de recomendaciones es lo
  * normal al principio, y ahí el vacío es una invitación, no un error.
  */
-export function EmptySource({ recommend = false }) {
+export function EmptySource({ recommend = false, mood = false }) {
+  // La búsqueda por ánimo sin nada que encaje: no es una playlist vacía.
+  if (mood) {
+    return (
+      <div className="state">
+        <h2 className="state__title">No encontré nada para eso</h2>
+        <p className="state__body">Probá contándolo con otras palabras, o con uno de los ejemplos.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="state">
       <h2 className="state__title">

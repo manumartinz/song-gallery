@@ -24,7 +24,8 @@ const TRACK_FIELDS =
   'album(name,release_date,total_tracks,images,external_urls(spotify)),' +
   'artists(id,name,external_urls(spotify))))';
 
-async function fetchAllItems(playlistId) {
+/** Las entradas crudas de una playlist, hasta MAX_TRACKS. La usa también /api/mood. */
+export async function fetchAllItems(playlistId) {
   const items = [];
   let url = `/playlists/${playlistId}/tracks?limit=100&fields=${encodeURIComponent(TRACK_FIELDS)}`;
 

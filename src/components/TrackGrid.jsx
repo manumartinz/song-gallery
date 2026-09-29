@@ -71,6 +71,7 @@ function GridCell({
   love = 0,
   loved = false,
   onReact,
+  onSimilar,
 }) {
   const setNode = useCallback((node) => register(index, node), [register, index]);
   const handleClick = useCallback(() => onSelect(index), [onSelect, index]);
@@ -84,6 +85,7 @@ function GridCell({
     mosaic ? 'cell--piece' : '',
     heard ? 'cell--heard' : '',
     loved ? 'cell--loved' : '',
+    onReact ? '' : 'cell--no-love',
   ]
     .filter(Boolean)
     .join(' ');
@@ -168,6 +170,24 @@ function GridCell({
           </svg>
         </button>
       ) : null}
+
+      {/* «Parecidas a esta»: la cuadrícula no tiene ficha, así que abre el
+          panel lateral (SimilarDrawer). Va al lado del corazón y aparece igual. */}
+      {onSimilar ? (
+        <button
+          type="button"
+          className="cell__similar"
+          data-no-drag
+          onClick={() => onSimilar(track)}
+          onKeyDown={(event) => {
+            if (event.key === ' ' || event.key === 'Enter') event.stopPropagation();
+          }}
+          aria-label={`Parecidas a ${track.title}`}
+          title="Parecidas a esta"
+        >
+          ✦
+        </button>
+      ) : null}
     </li>
   );
 }
@@ -199,6 +219,7 @@ export default function TrackGrid({
   onHover,
   onPointerDown,
   reactions,
+  onSimilar = null,
   moreCount = 0,
   moreUrl = null,
 }) {
@@ -250,6 +271,7 @@ export default function TrackGrid({
             love={reactions?.counts[track.id]?.love || 0}
             loved={reactions?.mine.has(`${track.id}:love`) ?? false}
             onReact={reactions ? reactions.toggle : null}
+            onSimilar={onSimilar}
           />
         );
       })}

@@ -5,9 +5,12 @@ import EndCard from './components/EndCard.jsx';
 import Footer from './components/Footer.jsx';
 import Recommend from './components/RecommendForm.jsx';
 import MiniPlayer from './components/MiniPlayer.jsx';
+import MoodSearch from './components/MoodSearch.jsx';
 import PlayGlyph from './components/PlayGlyph.jsx';
 import Quiz from './components/Quiz.jsx';
 import PlaylistMenu from './components/PlaylistMenu.jsx';
+import SimilarDrawer from './components/SimilarDrawer.jsx';
+import { extraKeyFor, SimilarContext } from './components/SimilarPanel.jsx';
 import Splash from './components/Splash.jsx';
 import TrackGrid from './components/TrackGrid.jsx';
 import TrackList from './components/TrackList.jsx';
@@ -21,7 +24,14 @@ import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
 import { EmptySource, EmptyState, ErrorState, LoadingList, NoMatches } from './components/States.jsx';
-import { dropPlaylistCache, fetchMineSources, parsePlaylistRef } from './lib/api.js';
+import {
+  createMood,
+  dropPlaylistCache,
+  fetchMineSources,
+  fetchMoodEnabled,
+  fetchSimilarEnabled,
+  parsePlaylistRef,
+} from './lib/api.js';
 import { tag, trackEvent } from './lib/clarity.js';
 import isHardReload from './lib/hardReload.js';
 import { facetOptions, hasFacets, makeFacetFilter, NO_FACETS } from './lib/facets.js';
@@ -102,6 +112,33 @@ export default function App() {
   const currentKind = current.kind;
   const isAlbum = currentKind === 'album';
   const isMine = currentKind === 'me';
+  const isMood = currentKind === 'mood';
+
+  /* La búsqueda por ánimo solo aparece si /api/mood dice que está encendida
+     (hay key de la IA y Redis). Quien llega con ?mood= la ve igual. */
+  const [moodEnabled, setMoodEnabled] = useState(isMood);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchMoodEnabled({ signal: controller.signal }).then((on) => {
+      if (!controller.signal.aborted && on) setMoodEnabled(true);
+    });
+    return () => controller.abort();
+  }, []);
+
+  /* «Parecidas a esta» en la ficha: solo si /api/similar dice que hay IA y Redis. */
+  const [similarEnabled, setSimilarEnabled] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchSimilarEnabled({ signal: controller.signal }).then((on) => {
+      if (!controller.signal.aborted && on) setSimilarEnabled(true);
+    });
+    return () => controller.abort();
+  }, []);
+
+  /* Pedir una selección son dos pasos: la IA la arma (POST, lo lento) y luego
+     se abre por su id como cualquier fuente. Esto es el primero. */
+  const [moodBusy, setMoodBusy] = useState(false);
+  const [moodError, setMoodError] = useState(null);
 
   /* Las de mi cuenta que el token deja ofrecer. Empieza vacía: el menú las
      suma cuando contesta /api/mine, y sin token no llegan nunca. */
@@ -204,6 +241,10 @@ export default function App() {
   });
 
   const { play, toggle, seek, stop, preload, getPosition } = player;
+  /* Las parecidas («Parecidas a esta») suenan con este mismo reproductor pero
+     no son de la fuente: mientras suena una, ninguna fila es «la que suena».
+     Se reconocen por su clave (extraKeyFor), así que no hace falta otro estado. */
+  const playingExtra = String(player.key || '').startsWith('sim:');
   /* El juego usa el mismo motor. Mientras esta abierto la lista no avanza sola
      ni atiende al teclado. */
   const [quizOpen, setQuizOpen] = useState(() => new URLSearchParams(location.search).has('juego'));
@@ -750,6 +791,8 @@ export default function App() {
 
   endedRef.current = () => {
     if (quizOpen) return;
+    // Una parecida no es de la lista: al terminar no se sigue con la lista.
+    if (playingExtra) return;
     if (radio) {
       radioNext();
       return;
@@ -917,6 +960,21 @@ export default function App() {
     trackEvent('source_change');
     setCurrent({ kind: 'me', id });
   }, []);
+  /* Cada llamada es una selección nueva, aunque la frase se repita: así
+     funciona también «Otra tanda». */
+  const selectMood = useCallback(async (q) => {
+    trackEvent('mood_search');
+    setMoodBusy(true);
+    setMoodError(null);
+    try {
+      const id = await createMood(q);
+      setCurrent({ kind: 'mood', id });
+    } catch (cause) {
+      setMoodError(cause.message);
+    } finally {
+      setMoodBusy(false);
+    }
+  }, []);
 
   /* La etiqueta va atada a `current` y no a los clicks: asi tambien la reciben
      la fuente de un enlace compartido y la que queda al quitar una pegada. */
@@ -1033,6 +1091,30 @@ export default function App() {
      filtro, y contarlos contra el total de la playlist confunde mas que ayuda. */
   const moreCount = query || hasFacets(facets) ? 0 : hiddenCount;
 
+  const playExtra = useCallback(
+    (track) => {
+      if (!track?.previewUrl) return;
+      setTouched(true);
+      setPlayingIndex(-1);
+      play(track, extraKeyFor(track.id));
+    },
+    [play],
+  );
+  /* La canción de la que se muestran parecidas en el panel lateral de la
+     cuadrícula. La pista entera y no su índice: ver SimilarDrawer. */
+  const [similarSeed, setSimilarSeed] = useState(null);
+  const closeSimilar = useCallback(() => setSimilarSeed(null), []);
+
+  const similar = useMemo(
+    () => ({
+      enabled: similarEnabled,
+      playExtra,
+      extraKey: playingExtra ? player.key : null,
+      isPlaying: player.isPlaying,
+    }),
+    [similarEnabled, playExtra, playingExtra, player.key, player.isPlaying],
+  );
+
   const viewProps = {
     items: visible,
     album: isAlbum,
@@ -1057,7 +1139,7 @@ export default function App() {
   };
 
   return (
-    <>
+    <SimilarContext.Provider value={similar}>
       {showSplash ? <Splash onDone={dismissSplash} /> : null}
 
       <Backdrop src={backdropSource} playing={player.isPlaying} />
@@ -1141,6 +1223,15 @@ export default function App() {
         />
 
         <main>
+          {moodEnabled ? (
+            <MoodSearch
+              active={isMood && data?.kind === 'mood' ? data.name : null}
+              busy={moodBusy || (isMood && loading)}
+              error={moodError}
+              onSearch={selectMood}
+            />
+          ) : null}
+
           {loading ? <LoadingList /> : null}
 
           {!loading && error ? (
@@ -1167,12 +1258,18 @@ export default function App() {
 
                 <div className="intro__text">
                   <p className="intro__eyebrow">
-                    {isAlbum ? 'Álbum' : isMine ? 'De mi Spotify' : 'Playlist'}
+                    {isAlbum
+                      ? 'Álbum'
+                      : isMine
+                        ? 'De mi Spotify'
+                        : isMood
+                          ? 'Elegidas por IA, entre mis canciones'
+                          : 'Playlist'}
                     {data.owner ? ` de ${data.owner}` : ''}
                   </p>
 
                   <div className="intro__head">
-                    <h1 className="intro__title">{data.name}</h1>
+                    <h1 className="intro__title">{isMood ? `«${data.name}»` : data.name}</h1>
 
                     <div className="intro__actions">
                       <button
@@ -1212,6 +1309,21 @@ export default function App() {
                           Recomendar una canción
                         </Recommend>
                       ) : null}
+
+                      {/* La misma frase, otras canciones: la IA no repite. */}
+                      {isMood ? (
+                        <button
+                          type="button"
+                          className="shuffle"
+                          onClick={() => selectMood(data.name)}
+                          disabled={moodBusy}
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v4h-4" />
+                          </svg>
+                          <span>{moodBusy ? 'Buscando…' : 'Otra tanda'}</span>
+                        </button>
+                      ) : null}
                     </div>
                   </div>
 
@@ -1242,7 +1354,7 @@ export default function App() {
                 /* Lo que se puede llegar a ver, no lo que se tiene cargado: en
                    una pegada decir "3 de 200" cuando el maximo son 49 miente. */
                 total={Math.min(tracks.length, trackLimit)}
-                omit={isAlbum || isMine ? SORTS_OFF_ALBUM : undefined}
+                omit={isAlbum || isMine || isMood ? SORTS_OFF_ALBUM : undefined}
                 facetChoices={facetChoices}
                 facets={facets}
                 onFacets={handleFacets}
@@ -1257,7 +1369,7 @@ export default function App() {
               {tracks.length === 0 ? (
                 /* Vacía de verdad, no filtrada: "Nada coincide" con un botón
                    de limpiar la búsqueda no tendría sentido. */
-                <EmptySource recommend={isRecsPlaylist} />
+                <EmptySource recommend={isRecsPlaylist} mood={isMood} />
               ) : visible.length === 0 ? (
                 <NoMatches
                   query={query}
@@ -1277,6 +1389,7 @@ export default function App() {
                 <TrackGrid
                   {...viewProps}
                   mosaic={isAlbum ? data.art?.lg || data.image : null}
+                  onSimilar={similarEnabled ? setSimilarSeed : null}
                   moreCount={moreCount}
                   moreUrl={data.externalUrl}
                 />
@@ -1375,7 +1488,11 @@ export default function App() {
       {/* Con el aviso de fin a la vista se retira: ocupan la misma franja. */}
       <NowListening now={ended && !radio ? null : listening} lifted={miniShown} />
 
+      {view === 'grid' && similarSeed ? (
+        <SimilarDrawer track={similarSeed} onClose={closeSimilar} />
+      ) : null}
+
       <Toast toast={toast} />
-    </>
+    </SimilarContext.Provider>
   );
 }

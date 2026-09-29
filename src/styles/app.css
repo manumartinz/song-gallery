@@ -1580,6 +1580,24 @@ body.is-dragging-body * {
   white-space: nowrap;
 }
 
+/* El porqué de la IA en la búsqueda por ánimo: una línea más, en cursiva y con
+   el acento, para que se lea como comentario y no como otro dato. */
+.row__why {
+  margin: 0.3rem 0 0;
+  font-size: clamp(0.74rem, 1.25vw, 0.88rem);
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--text);
+  opacity: 0.8;
+  text-wrap: pretty;
+}
+
+.row__why::before {
+  content: '✦ ';
+  font-style: normal;
+  color: var(--accent);
+}
+
 .row__index {
   font-variant-numeric: tabular-nums;
   font-size: 0.72rem;
@@ -4315,4 +4333,496 @@ body.is-modal .rail {
 
 .noscript p {
   color: var(--text-muted);
+}
+
+/* ---------- Búsqueda por ánimo ---------- */
+
+/* Va encima de la cabecera de la fuente, con su mismo ancho. La cabecera que
+   viene detrás recorta su aire de arriba: si no, entre las dos quedaría un
+   hueco que las separa como si fueran de páginas distintas. */
+.mood {
+  padding: clamp(1.5rem, 5vh, 3rem) var(--shell-x) 0;
+  max-width: var(--list-max);
+  margin-inline: auto;
+}
+
+.mood ~ .intro {
+  padding-top: clamp(1.5rem, 4vh, 2.5rem);
+}
+
+.mood__form {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.35rem 0.35rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(7, 7, 10, 0.35);
+  transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+
+.mood__form:focus-within {
+  border-color: var(--line-strong);
+  background: rgba(7, 7, 10, 0.5);
+}
+
+.mood__spark {
+  flex: none;
+  color: var(--accent);
+  font-size: 0.95rem;
+}
+
+.mood__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: clamp(0.85rem, 1.5vw, 0.98rem);
+  color: var(--text);
+}
+
+.mood__input::placeholder {
+  color: var(--text-faint);
+}
+
+.mood__input:focus {
+  outline: none;
+}
+
+.mood__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+  padding: 0.55rem 1.05rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: opacity var(--dur-fast);
+}
+
+.mood__go:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mood__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+}
+
+.mood__chips .chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mood__by {
+  margin-left: auto;
+  font-size: 0.62rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@media (max-width: 720px) {
+  .mood__form {
+    padding-left: 0.8rem;
+  }
+
+  /* En angosto la leyenda baja sola a su renglón en vez de apretar los chips. */
+  .mood__by {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
+.mood__error {
+  margin: 0.6rem 0 0 1rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+
+/* ---------- Parecidas a esta ---------- */
+
+/* Al final de la ficha. La fila entera es un botón y sus hijos no reciben el
+   puntero: el panel se lo devuelve, como las reacciones. */
+.similar {
+  margin-top: var(--gap-md);
+  pointer-events: auto;
+  cursor: default;
+}
+
+.similar__ask {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--text);
+  transition: color var(--dur-fast), background var(--dur-fast), border-color var(--dur-fast);
+}
+
+.similar__ask:hover:not(:disabled) {
+  color: var(--ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.similar__ask:disabled {
+  cursor: default;
+  opacity: 0.8;
+}
+
+.similar__spark {
+  color: var(--accent);
+}
+
+.similar__ask:hover:not(:disabled) .similar__spark {
+  color: inherit;
+}
+
+.similar__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  margin: 0 0 0.4rem;
+  font-size: 0.62rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.similar__more {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.62rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.similar__more:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.similar__list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.similar__item {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem;
+  border-radius: 8px;
+  transition: background var(--dur-fast);
+}
+
+.similar__item:hover,
+.similar__item--on {
+  background: rgba(244, 241, 234, 0.06);
+}
+
+.similar__item--dead {
+  opacity: 0.55;
+}
+
+.similar__play {
+  position: relative;
+  width: 2.75rem;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.similar__play img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* El glifo aparece al pasar por encima, y fijo en la que suena. */
+.similar__glyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 7, 10, 0.45);
+  color: var(--bone);
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+
+.similar__item:hover .similar__glyph,
+.similar__item--on .similar__glyph {
+  opacity: 1;
+}
+
+.similar__text {
+  display: grid;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.similar__title,
+.similar__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar__title {
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.similar__artist {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.similar__why {
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--text);
+  opacity: 0.8;
+  text-wrap: pretty;
+}
+
+.similar__link {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+
+.similar__link:hover {
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.08);
+}
+
+.similar__link svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.similar__error {
+  margin: 0.5rem 0 0;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+/* El ✦ de la cuadrícula: gemelo del corazón, a su derecha (o en su lugar si
+   no hay reacciones), y aparece en los mismos casos. */
+.cell__similar {
+  position: absolute;
+  top: 0.45rem;
+  left: 2.2rem;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 50%;
+  background: rgba(7, 7, 10, 0.78);
+  color: var(--accent);
+  font-size: 0.72rem;
+  line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-hover) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.cell--no-love .cell__similar {
+  left: 0.45rem;
+}
+
+.cell:hover .cell__similar,
+.cell--focused .cell__similar,
+.cell--current .cell__similar,
+.cell__similar:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cell__similar:active {
+  transform: scale(0.9);
+}
+
+/* ---------- Panel lateral de parecidas (cuadrícula) ---------- */
+
+/* A la derecha y a media altura, sin velo: no es un modal, se sigue usando la
+   cuadrícula con él abierto. Opaco porque flota sobre portadas. */
+.drawer {
+  position: fixed;
+  top: 50%;
+  right: var(--shell-x);
+  z-index: 6;
+  width: min(24rem, calc(100vw - 2 * var(--shell-x)));
+  max-height: min(34rem, calc(100dvh - 8rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.9rem 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(10, 10, 14, 0.95);
+  box-shadow: 0 1.5rem 3rem rgba(7, 7, 10, 0.55);
+  transform: translateY(-50%);
+  animation: drawer-in var(--dur-mid) var(--ease-out);
+}
+
+@keyframes drawer-in {
+  from {
+    opacity: 0;
+    transform: translate(12px, -50%);
+  }
+}
+
+.drawer__head {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.drawer__art {
+  width: 3rem;
+  aspect-ratio: 1;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.drawer__art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.drawer__text {
+  display: grid;
+  min-width: 0;
+}
+
+.drawer__eyebrow {
+  font-size: 0.6rem;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.drawer__title,
+.drawer__artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawer__title {
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.drawer__artist {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.drawer__close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: color var(--dur-fast), background var(--dur-fast);
+}
+
+.drawer__close:hover {
+  color: var(--text);
+  background: rgba(244, 241, 234, 0.08);
+}
+
+.drawer__close svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+/* En el panel el glifo de play se ve siempre, no solo al pasar por encima:
+   es donde se viene a escuchar, y en táctil no hay hover. */
+.drawer .similar__glyph {
+  opacity: 1;
+  background: rgba(7, 7, 10, 0.3);
+}
+
+body.is-now .drawer,
+body.is-modal .drawer {
+  visibility: hidden;
+}
+
+@media (max-width: 720px) {
+  /* En angosto, hoja desde abajo, por encima del mini. */
+  .drawer {
+    top: auto;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 70dvh;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    border-radius: 14px 14px 0 0;
+    transform: none;
+    animation-name: drawer-up;
+  }
+
+  @keyframes drawer-up {
+    from {
+      transform: translateY(24px);
+      opacity: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer {
+    animation: none;
+  }
 }

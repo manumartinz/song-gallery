@@ -3,6 +3,12 @@
   "functions": {
     "api/previews.js": {
       "maxDuration": 30
+    },
+    "api/mood.js": {
+      "maxDuration": 30
+    },
+    "api/similar.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [{ "source": "/admin", "destination": "/admin.html" }]

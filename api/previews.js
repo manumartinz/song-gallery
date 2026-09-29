@@ -1,5 +1,5 @@
 /**
- * GET /api/previews?ref=<playlist | album>&kind=<playlist|album>&offset=<n>&limit=<n>
+ * GET /api/previews?ref=<playlist | album | selección>&kind=<playlist|album|me|mood>&offset=<n>&limit=<n>
  *
  * Resuelve las URLs de preview de un tramo de la fuente. Existe para que
  * /api/playlist pueda responder al instante: antes el primer visitante esperaba
@@ -16,6 +16,8 @@ import { rateLimited } from './_ratelimit.js';
 import { logError } from './_log.js';
 import { resolvePreview, mapWithConcurrency } from './_preview.js';
 import { mineTracks } from './mine.js';
+import { moodTracks } from './mood.js';
+import { parseMoodId } from './_mood.js';
 import { parseMineRef } from '../src/config/mine.js';
 
 const CONCURRENCY = 8;
@@ -71,7 +73,9 @@ export default async function handler(req, res) {
   const id =
     kind === 'me'
       ? parseMineRef(req.query?.ref)
-      : isAlbum
+      : kind === 'mood'
+        ? parseMoodId(req.query?.ref)
+        : isAlbum
         ? parseAlbumId(req.query?.ref)
         : parsePlaylistId(req.query?.ref);
   if (!id) {
@@ -85,11 +89,14 @@ export default async function handler(req, res) {
 
   try {
     /* Las de mi cuenta no se paginan en Spotify (son 50 como mucho): se piden
-       enteras y se corta el tramo. Ya traen el ISRC. */
+       enteras y se corta el tramo. Ya traen el ISRC. Las de la búsqueda por
+       ánimo, igual: son ocho como mucho y salen de la selección guardada. */
     const tracks =
       kind === 'me'
         ? (await mineTracks()).slice(offset, offset + limit)
-        : isAlbum
+        : kind === 'mood'
+          ? (await moodTracks(id)).slice(offset, offset + limit)
+          : isAlbum
           ? await albumChunk(id, offset, limit)
           : await playlistChunk(id, offset, limit);
 

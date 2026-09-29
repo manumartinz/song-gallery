@@ -31,7 +31,8 @@ export default function NowPlaying({
 }) {
   const closeRef = useRef(null);
   const startY = useRef(null);
-  const note = noteFor(track?.id);
+  // Mi nota manda; sin ella, el porqué de la búsqueda por ánimo si lo hay.
+  const note = noteFor(track?.id) || track?.why || null;
 
   useEffect(() => {
     closeRef.current?.focus();

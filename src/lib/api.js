@@ -24,9 +24,11 @@ const PREFIXES = {
      lo abriría sin portada hasta que caducase. */
   album: 'song-gallery:album:v2:',
   me: 'song-gallery:me:v1:',
+  // Por id de selección: una selección no cambia nunca.
+  mood: 'song-gallery:mood:v3:',
 };
 
-const ROUTES = { playlist: 'playlist', album: 'album', me: 'mine' };
+const ROUTES = { playlist: 'playlist', album: 'album', me: 'mine', mood: 'mood' };
 
 function prefixFor(kind) {
   return PREFIXES[kind] || PREFIXES.playlist;
@@ -118,6 +120,58 @@ export async function fetchMineSources({ signal } = {}) {
   }
 }
 
+/** Si la búsqueda por ánimo está encendida (hay key de la IA y Redis). */
+export async function fetchMoodEnabled({ signal } = {}) {
+  try {
+    const response = await fetch('/api/mood', { signal });
+    return response.status === 200;
+  } catch {
+    return false;
+  }
+}
+
+/** Si «Parecidas a esta» está encendido (hay key de la IA y Redis). */
+export async function fetchSimilarEnabled({ signal } = {}) {
+  try {
+    const response = await fetch('/api/similar', { signal });
+    return response.status === 200;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Tres canciones nuevas parecidas a la pista `id`, ya con su preview. `more`
+ * pide otra tanda, distinta de las ya sugeridas.
+ */
+export async function fetchSimilar(id, { more = false, signal } = {}) {
+  const response = await fetch(`/api/similar?id=${encodeURIComponent(id)}${more ? '&more=1' : ''}`, {
+    signal,
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw httpError(body.error || `No se pudieron traer parecidas (${response.status}).`, response.status);
+  }
+  return Array.isArray(body.tracks) ? body.tracks : [];
+}
+
+/**
+ * Pide a la IA una selección nueva para la frase y devuelve su id, que luego
+ * se abre como cualquier fuente. Cada llamada da algo distinto.
+ */
+export async function createMood(q) {
+  const response = await fetch('/api/mood', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.id) {
+    throw httpError(body.error || `No se pudo armar la selección (${response.status}).`, response.status);
+  }
+  return body.id;
+}
+
 /** Carga la fuente entera (metadata, sin previews) tirando de caché si la hay. */
 export async function fetchSource({ kind, id }, { signal } = {}) {
   if (!id) {
@@ -134,7 +188,7 @@ export async function fetchSource({ kind, id }, { signal } = {}) {
   if (!response.ok) {
     throw httpError(
       body.error ||
-        `No se pudo cargar ${kind === 'album' ? 'el álbum' : 'la playlist'} (${response.status}).`,
+        `No se pudo cargar ${kind === 'album' ? 'el álbum' : kind === 'mood' ? 'la selección' : 'la playlist'} (${response.status}).`,
       response.status,
     );
   }

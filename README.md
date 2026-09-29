@@ -261,6 +261,43 @@ en la cara de playlists, primero y en el color de la canción que suena.
 Pide el permiso `user-top-read`, y sólo sale en el menú si el token lo tiene:
 con uno sacado antes, hay que volver a correr `npm run spotify-token`.
 
+## ¿Qué querés escuchar? (con IA)
+
+Arriba de la lista hay un campo para escribir un ánimo o un momento («para
+manejar de noche», «domingo lluvioso») y una IA elige de 5 a 8 canciones de mis
+playlists, cada una con una línea de por qué. Elige de un catálogo cerrado
+(`api/_catalog.js`: las playlists de `src/config/playlists.js`, menos la de
+recomendaciones), así que no puede inventar temas: un id que no está en el
+catálogo se descarta (`api/_mood.js`).
+
+Cada búsqueda es una selección nueva: por cada frase se guardan los ids ya
+elegidos y la IA prefiere otros si encajan igual («Otra tanda» pide otra). Cada
+selección se guarda con su id, que es lo que va en `?mood=`: un link compartido
+abre exactamente esa, y se reproduce como cualquier playlist.
+
+## Parecidas a esta (con IA)
+
+En la ficha de cada canción hay un botón «Parecidas a esta» que trae tres
+canciones NUEVAS, que no están en mis playlists, del mismo estilo, con su porqué
+y su preview para escucharlas ahí mismo (suenan con el mismo reproductor, sin
+que la lista avance al terminar). «Otras» pide otra tanda, sin repetir.
+
+La IA propone título y artista, y cada propuesta se busca en Spotify: solo
+entra si aparece con ese título y ese artista (`api/_similar.js`, `bestMatch`),
+así que nada inventado llega a la web. Lo elegido para cada canción se guarda en
+Redis 30 días (`api/similar.js`); los previews no, porque caducan.
+
+## La IA
+
+Las dos cosas usan Gemini en su plan gratuito (`api/_ai.js`, por REST y sin
+SDK): la key sale de aistudio.google.com y va en `GEMINI_API_KEY`.
+`GEMINI_MODEL` es opcional, para fijar un modelo (por defecto
+`gemini-flash-latest`; si está saturado se prueba con `gemini-flash-lite-latest`).
+Para no pasarse del cupo gratis, solo las llamadas a la IA cuentan para los
+límites (en Vercel, por IP: 10 búsquedas y 20 parecidas por hora; entre todos:
+200 y 300 al día), y el catálogo se arma cada 12 h. Sin la key o sin Redis, ni
+el campo ni el botón aparecen.
+
 ## Desplegar
 
 Vercel. Las variables `SPOTIFY_CLIENT_ID` y `SPOTIFY_CLIENT_SECRET` van en los

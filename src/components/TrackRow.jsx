@@ -4,6 +4,7 @@ import EqBars from './EqBars.jsx';
 import PlayGlyph from './PlayGlyph.jsx';
 import Reactions from './Reactions.jsx';
 import Scrubber from './Scrubber.jsx';
+import SimilarPanel from './SimilarPanel.jsx';
 import SplitTitle from './SplitTitle.jsx';
 import { noteFor } from '../config/notes.js';
 import { capitalize, formatDuration, formatFollowers, formatReleaseDate } from '../lib/format.js';
@@ -137,6 +138,9 @@ function TrackRow({
           ) : null}
           {track.artistLine}
         </p>
+        {/* Solo en la búsqueda por ánimo: por qué la eligió la IA. Va a la
+            vista, sin abrir la fila, porque es lo que se vino a leer. */}
+        {track.why ? <p className="row__why">{track.why}</p> : null}
       </div>
 
       <span className="row__time">
@@ -296,6 +300,10 @@ function TrackRow({
           {isOpen && isCurrent && playable ? (
             <Scrubber subscribePosition={subscribePosition} duration={duration} onSeek={onSeek} />
           ) : null}
+
+          {/* Solo con la ficha abierta: montado en cada fila, cada una guardaría
+              su propia tanda pedida aunque nadie la vea. */}
+          {isOpen ? <SimilarPanel trackId={track.id} /> : null}
         </div>
       </div>
     </li>
