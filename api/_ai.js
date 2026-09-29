@@ -15,7 +15,7 @@
  * GEMINI_MODEL es opcional, para fijar un modelo concreto. Si está saturado se
  * prueba una vez con FALLBACK_MODEL.
  */
-import { catalogText, LIMITS } from './_mood.js';
+import { catalogSections, catalogText, LIMITS } from './_mood.js';
 import { SIMILAR } from './_similar.js';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -43,16 +43,26 @@ const MOOD_SCHEMA = {
   type: 'OBJECT',
   properties: {
     intro: { type: 'STRING' },
-    picks: {
+    lists: {
       type: 'ARRAY',
       items: {
         type: 'OBJECT',
-        properties: { id: { type: 'STRING' }, why: WHY },
-        required: ['id', 'why'],
+        properties: {
+          list: { type: 'STRING' },
+          picks: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: { id: { type: 'STRING' }, why: WHY },
+              required: ['id', 'why'],
+            },
+          },
+        },
+        required: ['list', 'picks'],
       },
     },
   },
-  required: ['intro', 'picks'],
+  required: ['intro', 'lists'],
 };
 
 function moodInstructions(catalog, avoid) {
@@ -62,18 +72,19 @@ function moodInstructions(catalog, avoid) {
 
   return `Sos el DJ de una galería de música personal. Alguien describe lo que tiene ganas de escuchar (un ánimo, un momento, una actividad) y vos elegís canciones SOLO de este catálogo, que son las de mis playlists.
 
-Cada línea del catálogo es: id | canción | artista | género | año
+El catálogo va en una sección por playlist. Cada línea es: id | canción | artista | género | año
 
-${catalogText(catalog)}${already}
+${catalogSections(catalog)}${already}
 
 Reglas:
-- Elegí entre 5 y ${LIMITS.picks} canciones que encajen de verdad con el pedido. Usá lo que sabés de cada canción y artista (sonido, letra, energía), no solo el género.
+- Recorré CADA playlist por separado y, en "lists", devolvé una entrada por playlist con su nombre en "list" y en "picks" hasta ${LIMITS.perList} canciones de ESA playlist que encajen de verdad con el pedido, de la que mejor encaja a la que menos.
+- Buscá en todas: una playlist chica o de otro estilo igual puede tener dos o tres que encajen. Solo dejá "picks" vacío si de verdad ninguna de esa playlist va con el pedido.
+- Usá lo que sabés de cada canción y artista (sonido, letra, energía), no solo el género.
 - Devolvé el id EXACTO de la línea. Nunca inventes canciones ni ids.
-- Variá: no más de dos canciones del mismo artista.
-- Ordenalas como sonarían mejor una detrás de otra.
+- No más de dos canciones del mismo artista en total.
 - "why": por qué encaja, en 12 palabras como mucho, castellano rioplatense, tono cálido y concreto. Sin repetir el nombre de la canción.
 - "intro": una frase corta (máximo 20 palabras) que presente la selección, en el mismo tono.
-- Si el pedido no tiene nada que ver con música o con un ánimo, devolvé "picks" vacío y explicalo en "intro".`;
+- Si el pedido no tiene nada que ver con música o con un ánimo, devolvé todas las "picks" vacías y explicalo en "intro".`;
 }
 
 const SIMILAR_SCHEMA = {

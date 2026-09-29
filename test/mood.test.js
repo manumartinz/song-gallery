@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  catalogSections,
   catalogText,
   checkPicks,
   cleanQuery,
@@ -17,8 +18,8 @@ const B = 'b'.repeat(22);
 const C = 'c'.repeat(22);
 
 const catalog = [
-  { id: A, title: 'Uno', artist: 'X', genre: 'indie', year: 2019 },
-  { id: B, title: 'Dos | tres', artist: 'Y', genre: null, year: null },
+  { id: A, title: 'Uno', artist: 'X', genre: 'indie', year: 2019, list: 'lately' },
+  { id: B, title: 'Dos | tres', artist: 'Y', genre: null, year: null, list: 'trip up' },
 ];
 
 describe('cleanQuery', () => {
@@ -69,6 +70,12 @@ describe('catálogo', () => {
     expect(catalogText(catalog)).toBe(`${A} | Uno | X | indie | 2019\n${B} | Dos / tres | Y | - | -`);
   });
 
+  it('para la búsqueda va en una sección por playlist', () => {
+    expect(catalogSections(catalog)).toBe(
+      `### Playlist «lately»\n${A} | Uno | X | indie | 2019\n\n### Playlist «trip up»\n${B} | Dos / tres | Y | - | -`,
+    );
+  });
+
   it('sin ids, para cuando es solo el gusto de fondo', () => {
     expect(catalogText(catalog, { ids: false })).toBe('Uno | X | indie | 2019\nDos / tres | Y | - | -');
   });
@@ -107,6 +114,48 @@ describe('checkPicks', () => {
   it('no pasa del máximo de canciones', () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ id: String(i).padStart(22, '0') }));
     expect(checkPicks({ picks: many }, many).picks).toHaveLength(LIMITS.picks);
+  });
+
+  describe('mezcla de playlists', () => {
+    const song = (i, list) => ({ id: `${list[0]}${String(i).padStart(21, '0')}`, list });
+    const trip = Array.from({ length: 10 }, (_, i) => song(i, 'trip up'));
+    const show = Array.from({ length: 3 }, (_, i) => song(i, 'show up'));
+    const mixed = [...trip, ...show];
+
+    it('no deja que una sola playlist se lleve más del tope', () => {
+      const result = checkPicks({ picks: [...trip.slice(0, 7), ...show] }, mixed);
+      const lists = result.picks.map((pick) => mixed.find((e) => e.id === pick.id).list);
+      expect(lists.filter((l) => l === 'trip up')).toHaveLength(LIMITS.perList);
+      expect(lists.filter((l) => l === 'show up')).toHaveLength(3);
+    });
+
+    it('lee la respuesta por playlist y las intercala por turnos', () => {
+      const result = checkPicks(
+        {
+          lists: [
+            { list: 'trip up', picks: trip.slice(0, 3) },
+            { list: 'show up', picks: show.slice(0, 2) },
+          ],
+        },
+        mixed,
+      );
+      expect(result.picks.map((pick) => pick.id)).toEqual(
+        [trip[0], show[0], trip[1], show[1], trip[2]].map((e) => e.id),
+      );
+    });
+
+    it('no más de dos del mismo artista', () => {
+      const rufus = trip.slice(0, 3).map((e) => ({ ...e, artist: 'RÜFÜS DU SOL' }));
+      const result = checkPicks({ picks: [...rufus, ...show] }, [...rufus, ...show]);
+      const ids = result.picks.map((pick) => pick.id);
+      expect(ids.filter((id) => rufus.some((e) => e.id === id))).toHaveLength(2);
+    });
+
+    it('si el pedido solo encaja en una, rellena hasta el mínimo con las que sobraron', () => {
+      const result = checkPicks({ picks: trip.slice(0, 7) }, mixed);
+      expect(result.picks).toHaveLength(LIMITS.minPicks);
+      expect(result.picks.map((pick) => pick.id)).toEqual(trip.slice(0, LIMITS.minPicks).map((e) => e.id));
+    });
   });
 });
 

@@ -14,19 +14,20 @@ import { catalogEntry, mergeCatalog } from './_mood.js';
 import { fetchAllItems } from './playlist.js';
 import { PLAYLISTS } from '../src/config/playlists.js';
 
-const CATALOG_KEY = 'mood:catalog:v1';
+// v2: cada canción lleva la playlist de la que sale, para poder mezclarlas.
+const CATALOG_KEY = 'mood:catalog:v2';
 const CATALOG_TTL = 12 * 3600;
 
 export async function loadCatalog() {
   const cached = await kv('GET', CATALOG_KEY);
   if (cached) return JSON.parse(cached);
 
-  const ids = PLAYLISTS.filter((item) => !item.recommend)
-    .map((item) => parsePlaylistId(item.ref))
-    .filter(Boolean);
+  const sources = PLAYLISTS.filter((item) => !item.recommend)
+    .map((item) => ({ id: parsePlaylistId(item.ref), label: item.label }))
+    .filter((item) => item.id);
 
   const lists = await Promise.all(
-    ids.map(async (id) => {
+    sources.map(async ({ id }) => {
       const items = await fetchAllItems(id);
       return items
         .map((item) => item?.track)
@@ -37,8 +38,10 @@ export async function loadCatalog() {
   const all = lists.flat();
   const artists = await fetchArtistDetails(all.map((track) => track.artists?.[0]?.id));
   const catalog = mergeCatalog(
-    lists.map((list) =>
-      list.map((track) => catalogEntry(normalizeTrack(track, artists.get(track.artists?.[0]?.id)))),
+    lists.map((list, i) =>
+      list.map((track) =>
+        catalogEntry(normalizeTrack(track, artists.get(track.artists?.[0]?.id)), sources[i].label),
+      ),
     ),
   );
 
