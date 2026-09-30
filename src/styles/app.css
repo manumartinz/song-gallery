@@ -2367,13 +2367,13 @@ body.is-dragging-body * {
    archivo, una entra tarde, otra se va pronto y deja de leerse como un gesto.
 
    entrada                       0 -> 1540ms   (tres lineas escalonadas)
-   lectura                    1540 -> 2800ms
-   desvanecido               2800 -> 3600ms
-   Total 3.6s. El seguro de Splash.jsx (5000ms) queda por encima. */
+   lectura                    1540 -> 3400ms
+   desvanecido               3400 -> 4200ms
+   Total 4.2s. El seguro de Splash.jsx (5000ms) queda por encima. */
 .splash {
   --splash-in: 460ms; /* lo que tarda cada linea en entrar */
   --splash-step: 470ms; /* separacion entre una linea y la siguiente */
-  --splash-hold: 2800ms; /* cuando arranca la salida */
+  --splash-hold: 3400ms; /* cuando arranca la salida */
   --splash-out: 800ms; /* lo que dura el desvanecido */
 
   position: fixed;
@@ -2396,7 +2396,9 @@ body.is-dragging-body * {
 
 .splash__line {
   margin: 0;
-  max-width: 20ch;
+  /* Ancho pensado para la primera frase, la larga: asi cae en dos renglones
+     y no en tres, que le quitaban el ritmo de frase. */
+  max-width: 30ch;
   font-size: clamp(1.5rem, 5.5vw, 3rem);
   font-weight: 600;
   letter-spacing: var(--tracking-tight);
@@ -2408,11 +2410,8 @@ body.is-dragging-body * {
   animation-delay: 140ms;
 }
 
-/* La segunda baja de tono: jerarquia sin meter otro tamaño. Va mas ancha que
-   la primera porque es el doble de larga: con las 20ch de arriba se partia en
-   tres renglones y perdia el ritmo de frase. */
+/* La segunda baja de tono: jerarquia sin meter otro tamaño. */
 .splash__line--2 {
-  max-width: 26ch;
   color: var(--text-muted);
   animation-delay: calc(140ms + var(--splash-step));
 }

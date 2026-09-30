@@ -135,7 +135,7 @@ function RecommendModal({ onClose }) {
             <h2 id="rec-title" className="modal__title">
               Gracias
             </h2>
-            <p className="modal__text">La voy a escuchar.</p>
+            <p className="modal__text">Ya me llegó. Cuando la escuche, capaz aparece por acá.</p>
             <button ref={doneRef} type="button" className="play-all" onClick={onClose}>
               Volver
             </button>
