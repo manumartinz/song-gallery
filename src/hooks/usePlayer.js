@@ -278,6 +278,9 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
       // se repetiria y clicar la segunda copia pausaria en vez de sonar.
       const requestKey = key ?? track.id;
 
+      // Dentro del gesto: fuera de el, el navegador puede no dejar despertarlo.
+      resumeGraph();
+
       // Ya es la que suena: alternar pausa/reanudacion en vez de reiniciarla.
       if (statusRef.current.key === requestKey && engine.active !== -1) {
         const deck = engine.decks[engine.active];
@@ -337,9 +340,10 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
         if (engine.owner[index] !== seq || engine.seq !== seq) return;
 
         // El fallo puede venir de haber pedido CORS: un reintento sin el, y el
-        // visualizador queda desactivado para el resto de la sesion.
-        if (triedCors) {
-          disableGraph();
+        // visualizador queda desactivado para el resto de la sesion. Solo si
+        // el grafo se deja apagar: con un deck ya enrutado, el fallo es de la
+        // URL (lo normal: caducada) y se resuelve otra fresca mas arriba.
+        if (triedCors && disableGraph()) {
           attempt(false)
             .then(onPlaying)
             .catch((again) => onFailed(again, false));
@@ -374,6 +378,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
     if (!deck.src) return;
 
     if (deck.paused) {
+      resumeGraph();
       deck.play().catch(() => {});
       setStatus((s) => ({ ...s, isPlaying: true }));
     } else {
@@ -513,6 +518,7 @@ export default function usePlayer({ onEnded, crossfade = true } = {}) {
   useEffect(() => {
     const onVisibility = () => {
       if (document.hidden) settleFade(engineRef.current);
+      else resumeGraph(); // si lo suspendieron mientras no se miraba
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);

@@ -95,14 +95,30 @@ export function getDeckLevel(deck) {
   return gain ? gain.gain.value : null;
 }
 
-/** El contexto arranca suspendido si se creo antes del primer gesto. */
+/**
+ * Despierta el contexto. Arranca suspendido si se creo antes del primer gesto,
+ * y el navegador puede volver a suspenderlo despues: pestaña congelada tras un
+ * rato sin uso, el equipo que se duerme, unos auriculares que se desconectan
+ * (Safari lo llama 'interrupted'). Con el contexto parado, los decks enrutados
+ * reproducen en silencio, asi que se llama en cada gesto de reproducir.
+ */
 export function resumeGraph() {
-  if (graph?.context.state === 'suspended') graph.context.resume().catch(() => {});
+  const state = graph?.context.state;
+  if (state && state !== 'running' && state !== 'closed') graph.context.resume().catch(() => {});
 }
 
-/** Desactiva el grafo para toda la sesion (por ejemplo si CORS fallo). */
+/**
+ * Desactiva el grafo para toda la sesion (por ejemplo si CORS fallo). Devuelve
+ * si lo hizo. Con algun deck ya enrutado se niega: CORS ya demostro funcionar,
+ * y ese deck sale SIEMPRE por el grafo, de modo que cargarle audio sin CORS lo
+ * dejaria mudo para el resto de la sesion. Una URL de preview caducada (las de
+ * Deezer duran ~15 minutos) falla igual que una sin CORS, y era justo eso lo
+ * que pasaba al volver a una pestaña abierta hacia rato.
+ */
 export function disableGraph() {
+  if (graph?.gains.size) return false;
   broken = true;
+  return true;
 }
 
 export function isGraphEnabled() {

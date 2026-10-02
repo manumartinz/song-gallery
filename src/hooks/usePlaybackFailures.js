@@ -30,8 +30,11 @@ export default function usePlaybackFailures({
     if (player.isPlaying) {
       failStreak.current = 0;
       handledFailure.current = null;
+      // Sonó: si su URL vuelve a caducar (otro rato sin uso), merece otro
+      // reintento y no quedar marcada como rota.
+      retriedKeys.current.delete(player.key);
     }
-  }, [player.isPlaying]);
+  }, [player.isPlaying, player.key, retriedKeys]);
 
   useEffect(() => {
     const failed = player.failedKey;
