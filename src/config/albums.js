@@ -41,5 +41,4 @@ export const ALBUMS = [
     label: 'First Impressions of Earth',
     ref: 'https://open.spotify.com/album/1HQ61my1h3VWp2EBWKlp0n',
   },
-  { label: 'A Mermaid in Lisbon', ref: 'https://open.spotify.com/album/1NnqLqMQgh9ftyQPtUuKJd' },
 ];
