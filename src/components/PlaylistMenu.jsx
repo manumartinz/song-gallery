@@ -267,7 +267,7 @@ export default function PlaylistMenu({
 
           {albums.length ? (
             <>
-              <p className="menu__section">Mis álbumes favoritos</p>
+              <p className="menu__section">Álbumes que vengo escuchando</p>
               {albums.map((album) => {
                 const on = album.id === activeAlbumId;
                 return (

@@ -26,6 +26,7 @@
  * segundo es el idioma con el que se abrió la web de Spotify ese día.
  */
 export const ALBUMS = [
+  { label: 'La Jangada', ref: 'https://open.spotify.com/album/4eOTZGLOLYa8L4OFKdrXGr' },
   { label: 'La Vida Era Más Corta', ref: 'https://open.spotify.com/album/0sQR1p7NyAUqMPmWdZ6UBd' },
   { label: 'The Car', ref: 'https://open.spotify.com/album/2GROf0WKoP5Er2M9RXVNNs' },
   { label: 'The Slow Rush', ref: 'https://open.spotify.com/album/31qVWUdRrlb8thMvts0yYL' },
@@ -36,7 +37,6 @@ export const ALBUMS = [
   { label: 'Man on the Moon II', ref: 'https://open.spotify.com/album/08eM9GRdr5BCCHNqS3Wwud' },
   { label: 'Lux', ref: 'https://open.spotify.com/album/3SUEJULSGgBDG1j4GQhfYY' },
   { label: 'Born to Die', ref: 'https://open.spotify.com/album/5VoeRuTrGhTbKelUfwymwu' },
-  { label: "La Síntesis O'Konor", ref: 'https://open.spotify.com/album/7oEJJ7TxrfWGJXczcuOWpK' },
   {
     label: 'First Impressions of Earth',
     ref: 'https://open.spotify.com/album/1HQ61my1h3VWp2EBWKlp0n',

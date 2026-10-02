@@ -89,7 +89,7 @@ function noscript() {
         <p>${DESCRIPTION} Para escucharlas hace falta JavaScript.</p>
         <h2>Mis playlists favoritas</h2>
         <ul>${items('MusicPlaylist')}</ul>
-        <h2>Mis álbumes favoritos</h2>
+        <h2>Álbumes que vengo escuchando</h2>
         <ul>${items('MusicAlbum')}</ul>
       </main>
     </noscript>`;

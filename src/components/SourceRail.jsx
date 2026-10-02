@@ -194,7 +194,7 @@ export default function SourceRail({
       <div className="rail__panes">
         {hasAlbums ? (
           <div {...paneProps(showAlbums)}>
-            <p className="rail__eyebrow">Mis álbumes favoritos</p>
+            <p className="rail__eyebrow">Álbumes que vengo escuchando</p>
             <ul className="rail__list">
               {albums.map((album) => {
                 const on = album.id === activeAlbumId;
