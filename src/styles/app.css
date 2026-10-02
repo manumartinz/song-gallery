@@ -1212,6 +1212,106 @@ body.is-dragging-body * {
   }
 }
 
+/* "Recomendame una", en la barra de arriba. Es la unica pastilla rellena de
+   toda la interfaz —lo demas va en contorno—, y late: un halo que se abre y la
+   nota que da un golpe, con una pausa entre latido y latido para que llame la
+   atencion sin ponerse pesado. Con el raton encima deja de latir. */
+.rec__cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+  padding: 0.42rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  background: var(--bone);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast);
+}
+
+.rec__cta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: rec-halo 2.6s var(--ease-out) infinite;
+}
+
+.rec__cta svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: rec-beat 2.6s var(--ease-out) infinite;
+}
+
+.rec__cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px var(--accent-soft);
+}
+
+.rec__cta:hover::after,
+.rec__cta:hover svg {
+  animation: none;
+}
+
+@keyframes rec-halo {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 241, 234, 0.55);
+  }
+  45%,
+  100% {
+    box-shadow: 0 0 0 14px rgba(244, 241, 234, 0);
+  }
+}
+
+@keyframes rec-beat {
+  0%,
+  30%,
+  100% {
+    transform: none;
+  }
+  10% {
+    transform: scale(1.25) rotate(-8deg);
+  }
+  20% {
+    transform: scale(0.95);
+  }
+}
+
+/* En el telefono, solo la nota: la barra ya lleva marca, menu, volumen y
+   vista. El texto se esconde a la vista pero no al lector de pantalla. */
+@media (max-width: 720px) {
+  .rec__cta {
+    padding: 0.45rem;
+  }
+
+  .rec__cta span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec__cta::after,
+  .rec__cta svg {
+    animation: none;
+  }
+}
+
 /* ---------- Buscador y orden ---------- */
 
 .tools {

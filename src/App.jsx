@@ -1166,6 +1166,10 @@ export default function App() {
           </button>
 
           <div className="topbar__right">
+            {/* Recomendar es la mitad de la idea del sitio (el splash la
+                promete): va en la barra fija, a la vista desde cualquier
+                fuente y a cualquier altura, y no solo al pie. */}
+            <Recommend className="rec__cta">Recomendame una</Recommend>
             <PlaylistMenu
               entries={entries}
               /* Con un album abierto no hay pestaña encendida, y esta bien asi:
