@@ -204,7 +204,8 @@ Es lo único que escribe texto libre de desconocidos, así que va con capas
   abrir el modal y enviar. A un bot se le contesta que sí y no se guarda nada.
 - Validación: largos máximos, nombre obligatorio y que no sea un link, sin HTML,
   como mucho dos links en total.
-- Límites en Redis: 3 por hora y 8 por día por IP, y 150 por día en total.
+- Límites en Redis: hasta 5 por IP y, con la quinta, 6 horas de pausa; y 150
+  por día en total.
   Ese último es el techo de lo que puede crecer la lista aunque lleguen desde
   muchas IPs, y cuando se alcanza queda en los logs.
 - La misma canción dos veces en un día (con otro `?si=` u otra ortografía)

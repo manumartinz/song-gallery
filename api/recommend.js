@@ -16,9 +16,10 @@
  *     contesta que sí y no se guarda nada, para no enseñarles qué los delató.
  *  3. Validación del contenido (_recommendation.js): largos, nombre, sin HTML,
  *     pocos links.
- *  4. Límites en Redis, compartidos entre instancias: 3 por hora y 8 por día
- *     por IP, y 150 por día en total, que es el techo de lo que puede crecer
- *     la lista aunque lleguen desde muchas IPs a la vez.
+ *  4. Límites en Redis, compartidos entre instancias: hasta 5 por IP y, con
+ *     la quinta, 6 horas de pausa contadas desde ella; y 150 por día en total,
+ *     que es el techo de lo que puede crecer la lista aunque lleguen desde
+ *     muchas IPs a la vez.
  *  5. La misma canción dos veces en un día cuenta una: la segunda se acepta
  *     sin guardarse.
  */
@@ -28,8 +29,10 @@ import { logError } from './_log.js';
 
 const KEEP = 2000;
 const DAY = 86_400;
-const PER_IP_HOUR = 3;
-const PER_IP_DAY = 8;
+/* Cada persona manda hasta PER_IP; con la última se le corta PAUSE segundos.
+   Si se queda corta, el cupo se renueva solo PAUSE después del primer envío. */
+const PER_IP = 5;
+const PAUSE = 6 * 3600;
 const GLOBAL_DAY = 150;
 
 export default async function handler(req, res) {
@@ -58,23 +61,25 @@ export default async function handler(req, res) {
 
     const ip = clientIp(req);
     const today = new Date().toISOString().slice(0, 10);
-    const hourKey = `rl:rec:h:${ip}`;
-    const dayKey = `rl:rec:d:${ip}`;
+    const ipKey = `rl:rec:ip:${ip}`;
     const globalKey = `rl:rec:all:${today}`;
 
     // Todo en un solo viaje a Redis.
-    const [hour, , day, , global] = await kvPipeline([
-      ['INCR', hourKey],
-      ['EXPIRE', hourKey, '3600', 'NX'],
-      ['INCR', dayKey],
-      ['EXPIRE', dayKey, String(DAY), 'NX'],
+    const [sent, , global] = await kvPipeline([
+      ['INCR', ipKey],
+      ['EXPIRE', ipKey, String(PAUSE), 'NX'],
       ['INCR', globalKey],
       ['EXPIRE', globalKey, String(DAY), 'NX'],
     ]);
 
-    if (Number(hour) > PER_IP_HOUR || Number(day) > PER_IP_DAY) {
-      return res.status(429).json({ error: 'Ya me dejaste varias. Gracias: probá más tarde.' });
+    if (Number(sent) > PER_IP) {
+      return res
+        .status(429)
+        .json({ error: `Ya me mandaste ${PER_IP}. ¡Gracias! En unas horas podés mandarme más.` });
     }
+    // Con la última del cupo, la pausa empieza a contar desde ahora y no desde
+    // la primera: si no, quien las espacia casi no tendría pausa.
+    if (Number(sent) === PER_IP) await kvPipeline([['EXPIRE', ipKey, String(PAUSE)]]);
     if (Number(global) > GLOBAL_DAY) {
       logError('recommend', { status: 429, message: 'techo diario global alcanzado' });
       return res
