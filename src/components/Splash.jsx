@@ -32,10 +32,10 @@ export default function Splash({ onDone }) {
 
   /* Red de seguridad por si `animationend` no llega nunca: una pestaña que
      carga en segundo plano puede no animar hasta que se mira. Va justo por
-     encima de los 4.2s que dura la coreografia entera (las cifras estan en
+     encima de los 5.6s que dura la coreografia entera (las cifras estan en
      `.splash` en app.css); si se alarga alli, hay que subirlo aqui. */
   useEffect(() => {
-    const timer = setTimeout(onDone, 5000);
+    const timer = setTimeout(onDone, 6500);
     return () => clearTimeout(timer);
   }, [onDone]);
 
@@ -52,7 +52,10 @@ export default function Splash({ onDone }) {
       <p className="splash__line splash__line--1">
         Hice este espacio para recomendar canciones que me gustan.
       </p>
-      <p className="splash__line splash__line--2">Todavía está lejos de estar terminado.</p>
+      <p className="splash__line splash__line--2">
+        Todavía no trabajé las canciones que quiero mostrar realmente, así que tomemos esto con
+        pinzas.
+      </p>
       <p className="splash__sign">Manu A. Martínez</p>
     </div>
   );

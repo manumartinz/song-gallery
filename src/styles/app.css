@@ -2367,13 +2367,13 @@ body.is-dragging-body * {
    archivo, una entra tarde, otra se va pronto y deja de leerse como un gesto.
 
    entrada                       0 -> 1540ms   (tres lineas escalonadas)
-   lectura                    1540 -> 3400ms
-   desvanecido               3400 -> 4200ms
-   Total 4.2s. El seguro de Splash.jsx (5000ms) queda por encima. */
+   lectura                    1540 -> 4800ms
+   desvanecido               4800 -> 5600ms
+   Total 5.6s. El seguro de Splash.jsx (6500ms) queda por encima. */
 .splash {
   --splash-in: 460ms; /* lo que tarda cada linea en entrar */
   --splash-step: 470ms; /* separacion entre una linea y la siguiente */
-  --splash-hold: 3400ms; /* cuando arranca la salida */
+  --splash-hold: 4800ms; /* cuando arranca la salida */
   --splash-out: 800ms; /* lo que dura el desvanecido */
 
   position: fixed;
