@@ -125,11 +125,15 @@ function RecommendModal({ onClose }) {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="modal__card">
-        <button type="button" className="modal__close" onClick={onClose} aria-label="Cerrar">
-          &times;
-        </button>
+      {/* FUERA de la tarjeta: la tarjeta entra con un `transform`, y mientras
+          dura, un `position: fixed` dentro de ella se coloca respecto a la
+          tarjeta y no a la pantalla. La X salía sobre el texto y saltaba a la
+          esquina al terminar la animación. */}
+      <button type="button" className="modal__close" onClick={onClose} aria-label="Cerrar">
+        &times;
+      </button>
 
+      <div className="modal__card">
         {status === 'sent' ? (
           <div className="rec__done" role="status">
             <h2 id="rec-title" className="modal__title">
