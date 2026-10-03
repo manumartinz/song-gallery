@@ -9,6 +9,7 @@
 import { PLAYLISTS } from '../config/playlists.js';
 import { ALBUMS } from '../config/albums.js';
 import { MINE, parseMineRef } from '../config/mine.js';
+import { WRAPPED, WRAPPED_TRACKS } from '../config/wrapped.js';
 import { parseAlbumRef, parsePlaylistRef } from './api.js';
 import { SORTS } from './search.js';
 
@@ -111,7 +112,25 @@ export function readCustomEntries() {
   }
 }
 
-export const FIXED_ENTRIES = toEntries(PLAYLISTS);
+/**
+ * Los Wrapped del repo, uno por año. Son playlists fijas como las demas —se
+ * abren con `?p=`, se comparten y se ordenan igual— y lo unico propio es
+ * `wrapped`, que las saca de la lista normal para pintarlas como chips, y
+ * `limit`, que las corta a las primeras WRAPPED_TRACKS.
+ */
+export function toWrappedEntries(list) {
+  return list
+    .map((item) => {
+      const id = parsePlaylistRef(item.ref);
+      return id
+        ? { id, label: String(item.year), ref: item.ref, wrapped: true, limit: WRAPPED_TRACKS }
+        : null;
+    })
+    .filter(Boolean);
+}
+
+/* Al FINAL: la primera de la lista es la portada, y un Wrapped no lo es. */
+export const FIXED_ENTRIES = [...toEntries(PLAYLISTS), ...toWrappedEntries(WRAPPED)];
 
 /**
  * Criterio con el que abre cada playlist fija, declarado en la config del repo.

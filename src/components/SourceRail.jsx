@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import AddPlaylistForm from './AddPlaylistForm.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
-import isHardReload from '../lib/hardReload.js';
-
-const HINT_KEY = 'song-gallery:rail-hint-seen';
-const HINT_MS = 9000;
 
 /**
  * Playlists y álbumes favoritos, juntos a media altura del lado izquierdo, con
@@ -39,7 +35,6 @@ export default function SourceRail({
   adding,
   setAdding,
   onSubmit,
-  hint = false,
 }) {
   /* En movil esto no se pinta: las dos listas viven dentro del desplegable de
      la barra. El corte es el MISMO 720 px con el que el menu se vuelve
@@ -52,7 +47,6 @@ export default function SourceRail({
      fuente cambia de clase por su cuenta (quitar la playlist pegada que sonaba
      te devuelve a una playlist aunque estuvieras mirando los álbumes). */
   const [tab, setTab] = useState(activeKind === 'album' && hasAlbums ? 'album' : 'playlist');
-  const [hintOn, setHintOn] = useState(false);
   const rootRef = useRef(null);
 
   useEffect(() => {
@@ -65,44 +59,6 @@ export default function SourceRail({
     if (adding) setTab('playlist');
   }, [adding]);
 
-  /* Aviso de primera visita: señala que hay dos listas y que el switch las
-     alterna. Se marca como visto al APARECER y no al cerrarse —quien lo ignore
-     también lo ha visto— y `Ctrl+Shift+R` lo devuelve, que es cómo se vuelve a
-     ver sin abrir el inspector a borrar claves.
-
-     No choca con el del desplegable: aquel es solo de móvil y éste solo de
-     ancho, así que nunca salen los dos en la misma pantalla. */
-  useEffect(() => {
-    if (!hint || !hasAlbums || compact) return undefined;
-
-    const forced = isHardReload();
-
-    try {
-      if (!forced && localStorage.getItem(HINT_KEY)) return undefined;
-      localStorage.setItem(HINT_KEY, '1');
-    } catch {
-      /* modo privado: sale esta vez, y no hay donde recordar que salio */
-    }
-
-    setHintOn(true);
-    const timer = setTimeout(() => setHintOn(false), HINT_MS);
-    return () => clearTimeout(timer);
-  }, [hint, hasAlbums, compact]);
-
-  /* Cualquier gesto sobre el riel lo cancela: si ya lo está usando, sobra
-     explicárselo. El teclado no dispara `pointerdown`, de ahí el onClick de
-     la propia aspa. */
-  useEffect(() => {
-    if (!hintOn) return undefined;
-
-    const node = rootRef.current;
-    if (!node) return undefined;
-
-    const dismiss = () => setHintOn(false);
-    node.addEventListener('pointerdown', dismiss);
-    return () => node.removeEventListener('pointerdown', dismiss);
-  }, [hintOn]);
-
   /* En la tira de una sola fila (anchos medios) el rotulo encendido puede
      quedar fuera, deslizado a la derecha: se trae a la vista al cambiar de
      fuente o de cara. `scrollLeft` y no scrollIntoView, que ademas moveria la
@@ -110,7 +66,9 @@ export default function SourceRail({
      nada. */
   useEffect(() => {
     const center = () => {
-      const item = rootRef.current?.querySelector('.rail__pane--on .rail__item--on');
+      const item = rootRef.current?.querySelector(
+        '.rail__pane--on .rail__item--on, .rail__pane--on .rail__year--on',
+      );
       const list = item?.closest('.rail__list');
       if (!item || !list || list.scrollWidth <= list.clientWidth) return;
       // Centrado. Sin animar: al cargar la pagina el deslizamiento se cortaba a medias.
@@ -134,8 +92,9 @@ export default function SourceRail({
   if (compact) return null;
 
   const showAlbums = hasAlbums && tab === 'album';
-  const regular = entries.filter((entry) => !entry.recommend);
+  const regular = entries.filter((entry) => !entry.recommend && !entry.wrapped);
   const together = entries.filter((entry) => entry.recommend);
+  const wrapped = entries.filter((entry) => entry.wrapped);
 
   /* Las dos caras van montadas a la vez y apiladas en la misma celda: el riel
      mide lo que la mas alta y no cambia al alternar, asi que el switch no se
@@ -148,8 +107,6 @@ export default function SourceRail({
 
   return (
     <nav className="rail" ref={rootRef} aria-label="Playlists y álbumes">
-      {/* El switch y su aviso comparten caja: el globo apunta al switch, que
-          es lo que explica, y no a media altura de todo el riel. */}
       {hasAlbums ? (
         <div className="rail__top">
           <div className="rail__switch" role="group" aria-label="Qué lista ver" data-tab={tab}>
@@ -171,20 +128,6 @@ export default function SourceRail({
               </button>
             ))}
           </div>
-
-          {hintOn ? (
-            <p className="rail__hint" role="status">
-              Cambiá entre playlists y álbumes
-              <button
-                type="button"
-                className="rail__hint-close"
-                onClick={() => setHintOn(false)}
-                aria-label="Entendido"
-              >
-                &times;
-              </button>
-            </p>
-          ) : null}
         </div>
       ) : null}
 
@@ -293,6 +236,34 @@ export default function SourceRail({
                 </li>
               );
             })}
+
+            {/* Mis Wrapped, un chip por año, al final y aparte como la de
+                arriba. Un solo <li> con todos dentro: en el riel flotante es un
+                bloque con su rotulo, y en la tira sigue en la misma fila. */}
+            {wrapped.length ? (
+              <li className="rail__wrapped">
+                <p className="rail__eyebrow rail__wrapped-title" id="rail-wrapped">
+                  Mis Wrapped
+                </p>
+                <div className="rail__years" role="group" aria-labelledby="rail-wrapped">
+                  {wrapped.map((entry) => {
+                    const on = entry.id === activePlaylistId;
+                    return (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        className={`rail__year${on ? ' rail__year--on' : ''}`}
+                        onClick={() => onSelectPlaylist(entry.id)}
+                        aria-current={on ? 'true' : undefined}
+                        aria-label={`Wrapped ${entry.label}`}
+                      >
+                        {entry.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </li>
+            ) : null}
           </ul>
         </div>
       </div>

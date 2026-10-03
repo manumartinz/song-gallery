@@ -12,6 +12,7 @@ const SHORTCUTS = [
   ['r', 'Radio: todo al azar'],
   ['f', 'Ahora suena, a pantalla completa'],
   ['g', 'Adiviná la canción'],
+  ['h', 'Cómo funciona la web'],
   ['/', 'Buscar'],
   ['+  −  ·  m', 'Volumen y silencio'],
   ['?', 'Esta ayuda'],
@@ -21,7 +22,7 @@ const SHORTCUTS = [
  * Panel de atajos. Mismo lenguaje que el splash: fondo casi opaco, texto
  * centrado, sin caja. Se cierra con Escape, con `?` otra vez o tocando fuera.
  */
-export default function ShortcutsPanel({ onClose }) {
+export default function ShortcutsPanel({ onClose, onTour }) {
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -60,9 +61,16 @@ export default function ShortcutsPanel({ onClose }) {
             </div>
           ))}
         </dl>
-        <button ref={closeRef} type="button" className="keys__close" onClick={onClose}>
-          Cerrar
-        </button>
+        <div className="keys__actions">
+          <button ref={closeRef} type="button" className="keys__close" onClick={onClose}>
+            Cerrar
+          </button>
+          {onTour ? (
+            <button type="button" className="keys__close keys__close--quiet" onClick={onTour}>
+              Ver cómo funciona
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

@@ -418,6 +418,52 @@ body.is-dragging-body * {
   border-left: 1px solid var(--line-strong);
 }
 
+/* "Mis Wrapped", aparte como la de arriba. En la tira, rotulo y años van en
+   la misma fila; flotando (mas abajo) es un bloque con los años debajo. */
+.rail__wrapped {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  margin-left: var(--gap-xs);
+  padding-left: var(--gap-md);
+  border-left: 1px solid var(--line-strong);
+}
+
+.rail__wrapped-title {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.rail__years {
+  display: flex;
+  gap: var(--gap-xs) var(--gap-sm);
+}
+
+/* El tono de `.rail__item`, con cifras de ancho fijo para que los chips no
+   bailen de un año a otro. */
+.rail__year {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  transition: color var(--dur-hover) var(--ease-out);
+}
+
+.rail__year:hover,
+.rail__year:focus-visible {
+  color: var(--text);
+}
+
+.rail__year--on {
+  color: var(--accent);
+}
+
 .rail__row:hover .menu__drop,
 .rail__row:focus-within .menu__drop {
   opacity: 1;
@@ -490,62 +536,6 @@ body.is-dragging-body * {
   font-weight: 600;
 }
 
-/* Aviso de primera visita. Mismo globo que el del menu de playlists —opaco,
-   redondo y con su punta—, pero colgando del switch (`.rail__top`). En la
-   tira del flujo cae debajo, con la punta hacia arriba. */
-.rail__hint {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  left: 0;
-  z-index: 4; /* sobre la barra (3), por debajo del mini (5) */
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0;
-  padding: 0.36rem 0.4rem 0.36rem 0.85rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  /* Opaco: cuelga sobre la lista, que se desplaza por debajo. */
-  background: rgba(12, 12, 16, 0.98);
-  font-size: 0.66rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-  animation: hint-drop var(--dur-slow) var(--ease-out) backwards 350ms;
-}
-
-.rail__hint::before {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: 1.6rem;
-  width: 7px;
-  height: 7px;
-  background: rgba(12, 12, 16, 0.98);
-  border-top: 1px solid var(--line-strong);
-  border-left: 1px solid var(--line-strong);
-  transform: rotate(45deg);
-}
-
-.rail__hint-close {
-  display: grid;
-  place-items: center;
-  width: 1.05rem;
-  height: 1.05rem;
-  flex: none;
-  border-radius: 50%;
-  font-size: 0.82rem;
-  line-height: 1;
-  color: var(--text-faint);
-  transition: color var(--dur-fast), background-color var(--dur-fast);
-}
-
-.rail__hint-close:hover {
-  color: var(--text);
-  background: rgba(244, 241, 234, 0.08);
-}
-
 @media (min-width: 1320px) {
   /* Sueltos sobre el fondo, a media altura y contra el margen izquierdo. No
      empujan nada: el contenido sigue centrado en toda la pagina, igual que
@@ -575,6 +565,28 @@ body.is-dragging-body * {
     border-top: 1px solid var(--line-strong);
   }
 
+  /* Flotando, los Wrapped son un bloque: raya, rotulo y los años debajo,
+     cuatro o cinco por fila. */
+  .rail__wrapped {
+    display: block;
+    margin: var(--gap-xs) 0 0;
+    padding: var(--gap-sm) 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line-strong);
+  }
+
+  .rail__wrapped-title {
+    margin-bottom: var(--gap-sm);
+  }
+
+  .rail__years {
+    flex-wrap: wrap;
+  }
+
+  .rail__year {
+    pointer-events: auto;
+  }
+
   /* Todo lo que se pulsa recupera los clicks que la caja deja pasar. */
   .rail__switch,
   .rail__row .menu__drop,
@@ -595,25 +607,6 @@ body.is-dragging-body * {
     /* Un titulo largo parte de linea dentro de su franja en vez de crecer hacia
        las canciones. */
     max-width: 100%;
-  }
-
-  /* Flotando, el globo no cabe debajo —taparia los rotulos—, asi que sale AL
-     LADO del switch, a su altura, con la punta mirandolo. */
-  .rail__hint {
-    pointer-events: auto;
-    top: 50%;
-    left: calc(100% + 0.7rem);
-    transform: translateY(-50%);
-    animation-name: hint-slide;
-  }
-
-  .rail__hint::before {
-    top: 50%;
-    left: -4px;
-    margin-top: -3.5px;
-    border-top: 0;
-    border-left: 1px solid var(--line-strong);
-    border-bottom: 1px solid var(--line-strong);
   }
 
   /* La lista se centra y le sobra margen, pero la cuadricula llega hasta el
@@ -818,79 +811,10 @@ body.is-dragging-body * {
   border-color: var(--line-strong);
 }
 
-/* Globo que señala el menu en la primera visita.
-   Va fuera de flujo a proposito: `.menu` envuelve, y un hijo mas en flujo
-   mandaria las pestañas a una segunda linea. */
-.menu__hint {
-  position: absolute;
-  top: calc(100% + 0.55rem);
-  right: 0;
-  z-index: 4; /* sobre la barra (3), por debajo del mini (5) */
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.36rem 0.4rem 0.36rem 0.85rem;
-  border: 1px solid var(--line-strong);
-  border-radius: 999px;
-  /* Opaco: cuelga sobre la lista, que se desplaza por debajo. */
-  background: rgba(12, 12, 16, 0.98);
-  font-size: 0.66rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-  animation: hint-drop var(--dur-slow) var(--ease-out) backwards 350ms;
-}
-
-/* La punta: un cuadrado girado 45 grados al que solo se le dejan las dos caras
-   que asoman por encima del globo. Se coloca bajo la ULTIMA pestaña y no en el
-   borde, que ahi esta el "+" y señalarlo diria otra cosa: que hay que añadir
-   una playlist, cuando lo que se quiere contar es que ya hay varias. */
-.menu__hint::before {
-  content: '';
-  position: absolute;
-  top: -4px;
-  right: 2.6rem;
-  width: 7px;
-  height: 7px;
-  background: rgba(12, 12, 16, 0.98);
-  border-top: 1px solid var(--line-strong);
-  border-left: 1px solid var(--line-strong);
-  transform: rotate(45deg);
-}
-
-.menu__hint-close {
-  display: grid;
-  place-items: center;
-  width: 1.05rem;
-  height: 1.05rem;
-  flex: none;
-  border-radius: 50%;
-  font-size: 0.82rem;
-  line-height: 1;
-  color: var(--text-faint);
-  transition: color var(--dur-fast), background-color var(--dur-fast);
-}
-
-.menu__hint-close:hover {
-  color: var(--text);
-  background: rgba(244, 241, 234, 0.08);
-}
-
 @keyframes hint-drop {
   from {
     opacity: 0;
     transform: translateY(-6px);
-  }
-}
-
-/* El mismo gesto para el globo que sale al lado, entrando desde la izquierda.
-   Hace falta uno propio porque ese va centrado con `translateY(-50%)` y una
-   animacion que toque `transform` sin conservarlo lo descolocaria medio alto. */
-@keyframes hint-slide {
-  from {
-    opacity: 0;
-    transform: translate(-6px, -50%);
   }
 }
 
@@ -2930,6 +2854,445 @@ body.is-dragging-body * {
   border-color: var(--bone);
 }
 
+.keys__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap-sm);
+  margin-top: var(--gap-xl);
+}
+
+.keys__actions .keys__close {
+  margin-top: 0;
+}
+
+/* La segunda accion, sin borde: "Cerrar" sigue siendo la principal. */
+.keys__close--quiet {
+  border-color: transparent;
+}
+
+/* ---------- Cómo funciona ---------- */
+
+/* El mismo velo que el panel de atajos (`.keys`); solo cambia lo de dentro. */
+.tour__inner {
+  width: min(100%, 30rem);
+  touch-action: pan-y;
+}
+
+/* La tarjeta tiene alto fijo para que puntos y botones no salten de una a
+   otra: hay textos de una linea y de tres. */
+.tour__card {
+  min-height: 23rem;
+}
+
+/* ---------- Ilustraciones del tutorial (TourArt.jsx) ---------- */
+
+.tour__art {
+  width: min(100%, 17rem);
+  margin-bottom: var(--gap-lg);
+}
+
+.tart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: inherit;
+}
+
+/* Lo que no se cuenta va apagado; lo que se cuenta, en el acento. */
+.tart__cover {
+  fill: rgba(244, 241, 234, 0.07);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.tart__cover--on {
+  fill: rgba(244, 241, 234, 0.12);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+
+.tart__line {
+  fill: var(--line-strong);
+}
+
+.tart__line--faint {
+  fill: var(--line);
+}
+
+.tart__line--strong {
+  fill: var(--text-muted);
+}
+
+.tart__line--on {
+  fill: var(--accent);
+}
+
+.tart__rule {
+  fill: var(--line);
+}
+
+.tart__bar,
+.tart__panel {
+  fill: rgba(244, 241, 234, 0.04);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.tart__field {
+  fill: rgba(244, 241, 234, 0.04);
+  stroke: var(--accent);
+  stroke-width: 1.2;
+}
+
+.tart__pill {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.tart__pill--on {
+  stroke: var(--accent);
+  stroke-width: 1.3;
+}
+
+.tart__pill--solid {
+  fill: var(--bone);
+  stroke: none;
+}
+
+.tart__eyebrow {
+  font-size: 6.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  fill: var(--text-faint);
+}
+
+.tart__chip {
+  font-size: 9px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text-muted);
+}
+
+.tart__chip--on {
+  fill: var(--accent);
+}
+
+.tart__label {
+  font-size: 8.5px;
+  font-weight: 500;
+  fill: var(--text-muted);
+}
+
+.tart__label--on {
+  fill: var(--text);
+}
+
+.tart__label--ink {
+  font-weight: 600;
+  fill: var(--ink);
+}
+
+.tart__arrow,
+.tart__chev {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tart__progress {
+  fill: var(--line);
+}
+
+.tart__progress--on {
+  fill: var(--accent);
+}
+
+.tart__react {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.tart__react--on {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.tart__dot {
+  fill: var(--accent);
+}
+
+.tart__ring {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+
+.tart__wave {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  animation: tart-wave 1.8s var(--ease-out) infinite;
+}
+
+.tart__wave--2 {
+  animation-delay: 0.3s;
+}
+
+@keyframes tart-wave {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Ecualizador: las mismas barras que suben y bajan en la fila que suena. */
+.tart__eq rect {
+  fill: var(--accent);
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: tart-eq 0.9s ease-in-out infinite alternate;
+}
+
+.tart__eq rect:nth-child(2) {
+  animation-delay: -0.3s;
+}
+
+.tart__eq rect:nth-child(3) {
+  animation-delay: -0.6s;
+}
+
+.tart__eq rect:nth-child(4) {
+  animation-delay: -0.15s;
+}
+
+@keyframes tart-eq {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* El toque: un circulo que se abre y se apaga, en bucle. */
+.tart__tap {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tart-tap 2.2s var(--ease-out) infinite;
+}
+
+@keyframes tart-tap {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.4);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+/* Movil: el panel sube desde abajo, como el de verdad. */
+.tart__sheet {
+  animation: tart-sheet var(--dur-slow) var(--ease-out) backwards 200ms;
+}
+
+@keyframes tart-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+/* Animo: la frase se escribe sola y despues llegan las canciones. */
+.tart__typing {
+  fill: var(--text-muted);
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: tart-type 3.6s steps(14) infinite;
+}
+
+.tart__caret {
+  fill: var(--accent);
+  animation: tart-caret 3.6s steps(14) infinite;
+}
+
+@keyframes tart-type {
+  0% {
+    transform: scaleX(0);
+  }
+  40%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes tart-caret {
+  0% {
+    transform: translateX(0);
+  }
+  40%,
+  100% {
+    transform: translateX(120px);
+  }
+}
+
+.tart__result {
+  animation: tart-result 3.6s var(--ease-out) infinite;
+}
+
+.tart__result--1 {
+  animation-delay: 0.15s;
+}
+
+.tart__result--2 {
+  animation-delay: 0.3s;
+}
+
+@keyframes tart-result {
+  0%,
+  42% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  55%,
+  92% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Recomendame una: el mismo pulso que tiene el boton en la barra. */
+.tart__pulse {
+  fill: none;
+  stroke: var(--bone);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tart-pulse 2s var(--ease-out) infinite;
+}
+
+@keyframes tart-pulse {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(1.25, 1.6);
+  }
+}
+
+.tour__step {
+  animation: tour-in var(--dur-mid) var(--ease-out);
+}
+
+@keyframes tour-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+.tour__eyebrow {
+  margin: 0 0 var(--gap-sm);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.tour__title {
+  margin: 0 0 var(--gap-md);
+  font-size: clamp(1.5rem, 4vw, 2.2rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+}
+
+.tour__text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+.tour__dots {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: var(--gap-lg);
+}
+
+.tour__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  transition: background var(--dur-mid), width var(--dur-mid) var(--ease-out);
+}
+
+.tour__dot--on {
+  width: 18px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.tour__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--gap-lg);
+}
+
+.tour__nav .keys__close {
+  margin-top: 0;
+}
+
+.tour__moves {
+  display: flex;
+  gap: var(--gap-xs);
+}
+
+.tour__skip {
+  padding: 0.5rem 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  transition: color var(--dur-fast);
+}
+
+.tour__skip:hover {
+  color: var(--text);
+}
+
+/* En movil, botones a la medida de un dedo. */
+@media (max-width: 720px) {
+  .tour__skip,
+  .tour__back,
+  .tour__next {
+    min-height: 2.75rem;
+  }
+}
+
 /* ---------- Ahora suena, a pantalla completa ---------- */
 
 /* El fondo difuminado de la pagina sigue detras: el velo solo lo oscurece lo
@@ -3865,6 +4228,33 @@ body.is-now .rail {
     border-top: 1px solid var(--line);
   }
 
+  /* Los años de "Mis Wrapped", en chips que reparten la fila. Cada uno mide
+     44 px de alto, como las filas, que es lo que pide un dedo. */
+  .menu__years {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(4.2rem, 1fr));
+    gap: var(--gap-xs);
+    padding: 0 0.2rem;
+  }
+
+  .menu__year {
+    min-height: 2.75rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: none;
+    color: var(--text-faint);
+    font: inherit;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: color var(--dur-hover) var(--ease-out), border-color var(--dur-hover) var(--ease-out);
+  }
+
+  .menu__year--on {
+    color: var(--text);
+    border-color: var(--accent);
+  }
+
   /* Encabezado de cada bloque del panel: playlists arriba, albumes debajo. Solo
      aparece cuando hay los dos, asi que no hace falta filete separador: el
      propio rotulo con su aire ya corta. */
@@ -3939,11 +4329,6 @@ body.is-now .rail {
     flex: 1;
     width: auto;
     min-width: 0;
-  }
-
-  /* Aqui el menu entero es un boton, asi que la punta va bajo su flecha. */
-  .menu__hint::before {
-    right: 1.1rem;
   }
 
   .row {

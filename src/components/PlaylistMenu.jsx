@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import AddPlaylistForm from './AddPlaylistForm.jsx';
 import useMediaQuery from '../hooks/useMediaQuery.js';
-import isHardReload from '../lib/hardReload.js';
-
-const HINT_KEY = 'song-gallery:nav-hint-seen';
-const HINT_MS = 9000;
 
 /**
  * Selector de fuente en movil: un desplegable en la barra de arriba.
@@ -23,11 +19,6 @@ const HINT_MS = 9000;
  * decide en JS con `useMediaQuery` y no con una media query a secas. Es el
  * mismo 720 px que usa el riel: si no coincidieran quedaria una franja de
  * anchos sin selector en ninguna parte.
- *
- * `hint` es permiso, no orden: dice que la pagina esta en un momento apto para
- * enseñar el aviso de primera visita (hay playlist cargada y el splash ya no
- * esta). Si toca enseñarlo o no lo decide este componente, que es quien sabe
- * si ya se vio.
  */
 export default function PlaylistMenu({
   entries,
@@ -43,11 +34,9 @@ export default function PlaylistMenu({
   setAdding,
   onSubmit,
   onRemove,
-  hint = false,
 }) {
   const compact = useMediaQuery('(max-width: 720px)');
   const [open, setOpen] = useState(false);
-  const [hintOn, setHintOn] = useState(false);
   const rootRef = useRef(null);
 
   /* El formulario tambien se abre desde fuera (el boton del estado vacio llama
@@ -80,53 +69,6 @@ export default function PlaylistMenu({
     };
   }, [open]);
 
-  /* Aviso de primera visita. El boton se lee como el rotulo de lo que se esta
-     viendo, no como una eleccion, asi que hay quien nunca descubre que hay mas
-     de una playlist. Esto lo señala una vez y se va solo.
-
-     Solo en movil: en ancho este componente no pinta nada, y marcar la clave
-     alli la gastaria sin que nadie llegase a ver el globo. El riel tiene el
-     suyo propio.
-
-     Se marca como visto al APARECER y no al cerrarse, por lo mismo que el
-     splash: quien lo ignore tambien lo ha visto, y volver a sacarlo en cada
-     visita seria una molestia. Con una sola cosa que elegir no hay aviso.
-
-     Ctrl+Shift+R lo saca igualmente: es la forma de volver a verlo sin abrir
-     el inspector a borrar la clave. */
-  const choices = entries.length + albums.length;
-
-  useEffect(() => {
-    if (!hint || !compact || choices < 2) return undefined;
-
-    const forced = isHardReload();
-
-    try {
-      if (!forced && localStorage.getItem(HINT_KEY)) return undefined;
-      localStorage.setItem(HINT_KEY, '1');
-    } catch {
-      /* modo privado: sale esta vez, y no hay donde recordar que salio */
-    }
-
-    setHintOn(true);
-    const timer = setTimeout(() => setHintOn(false), HINT_MS);
-    return () => clearTimeout(timer);
-  }, [hint, compact, choices]);
-
-  /* Cualquier gesto sobre el menu lo cancela: si ya lo esta usando, sobra
-     explicarselo. El teclado no dispara `pointerdown`, de ahi el onClick del
-     aspa. */
-  useEffect(() => {
-    if (!hintOn) return undefined;
-
-    const node = rootRef.current;
-    if (!node) return undefined;
-
-    const dismiss = () => setHintOn(false);
-    node.addEventListener('pointerdown', dismiss);
-    return () => node.removeEventListener('pointerdown', dismiss);
-  }, [hintOn, compact]);
-
   if (!compact) return null;
 
   const choose = (entry) => {
@@ -150,10 +92,9 @@ export default function PlaylistMenu({
   const activeAlbum = albums.find((album) => album.id === activeAlbumId);
   const activeEntry = entries.find((entry) => entry.id === activeId);
   const activeMine = mine.find((entry) => entry.id === activeMineId);
-  const current = activeAlbum?.label || activeEntry?.label || activeMine?.label || 'Playlists';
-
-  // Con el desplegable o el alta abiertos el aviso ya no pinta nada.
-  const showHint = hintOn && !open && !adding;
+  const activeLabel = activeEntry?.wrapped ? `Wrapped ${activeEntry.label}` : activeEntry?.label;
+  const current = activeAlbum?.label || activeLabel || activeMine?.label || 'Playlists';
+  const wrapped = entries.filter((entry) => entry.wrapped);
 
   return (
     <nav className="menu menu--compact" ref={rootRef} aria-label="Playlists y álbumes">
@@ -204,7 +145,7 @@ export default function PlaylistMenu({
               no dice nada que no diga ya el boton. */}
           {albums.length ? <p className="menu__section">Mis playlists favoritas</p> : null}
 
-          {entries.filter((entry) => !entry.recommend).map((entry) => {
+          {entries.filter((entry) => !entry.recommend && !entry.wrapped).map((entry) => {
             /* Las pegadas nacen sin nombre y lo reciben cuando contesta
                Spotify. Mientras tanto hace falta algo que poner. */
             const label = entry.label || 'Playlist';
@@ -265,6 +206,31 @@ export default function PlaylistMenu({
               );
             })}
 
+          {/* Mis Wrapped: los años en chips, varios por fila. Como filas de
+              44 px serian nueve renglones para decir nueve numeros. */}
+          {wrapped.length ? (
+            <>
+              <p className="menu__section">Mis Wrapped</p>
+              <div className="menu__years">
+                {wrapped.map((entry) => {
+                  const on = entry.id === activeId;
+                  return (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      className={`menu__year${on ? ' menu__year--on' : ''}`}
+                      onClick={() => choose(entry)}
+                      aria-current={on ? 'true' : undefined}
+                      aria-label={`Wrapped ${entry.label}`}
+                    >
+                      {entry.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
+
           {albums.length ? (
             <>
               <p className="menu__section">Álbumes que vengo escuchando</p>
@@ -286,23 +252,6 @@ export default function PlaylistMenu({
             </>
           ) : null}
         </div>
-      ) : null}
-
-      {showHint ? (
-        <p className="menu__hint" role="status">
-          {/* Si no hay albumes vuelve a hablar solo de lo que hay. */}
-          {albums.length
-            ? 'Tocá para cambiar de playlist o álbum'
-            : 'Tocá para cambiar de playlist'}
-          <button
-            type="button"
-            className="menu__hint-close"
-            onClick={() => setHintOn(false)}
-            aria-label="Entendido"
-          >
-            &times;
-          </button>
-        </p>
       ) : null}
     </nav>
   );

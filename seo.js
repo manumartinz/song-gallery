@@ -27,7 +27,7 @@ function pages() {
   return [
     ...FIXED_ENTRIES.map((entry) => ({
       type: 'MusicPlaylist',
-      name: entry.label,
+      name: entry.wrapped ? `Wrapped ${entry.label}` : entry.label,
       url: `${SITE}/?p=${entry.id}`,
     })),
     ...ALBUM_ENTRIES.map((album) => ({

@@ -20,6 +20,7 @@ import NowPlaying from './components/NowPlaying.jsx';
 import ShortcutsPanel from './components/ShortcutsPanel.jsx';
 import SourceRail from './components/SourceRail.jsx';
 import Toast from './components/Toast.jsx';
+import Tour from './components/Tour.jsx';
 import Toolbar from './components/Toolbar.jsx';
 import ViewToggle from './components/ViewToggle.jsx';
 import VolumeControl from './components/VolumeControl.jsx';
@@ -54,6 +55,7 @@ import useDocumentMeta from './hooks/useDocumentMeta.js';
 import useDragScroll from './hooks/useDragScroll.js';
 import useHeard from './hooks/useHeard.js';
 import useKeyboard from './hooks/useKeyboard.js';
+import useMediaQuery from './hooks/useMediaQuery.js';
 import useMediaSession from './hooks/useMediaSession.js';
 import usePlaybackFailures from './hooks/usePlaybackFailures.js';
 import usePlayer from './hooks/usePlayer.js';
@@ -65,8 +67,12 @@ import useSticky from './hooks/useSticky.js';
 import useToast from './hooks/useToast.js';
 import useUrlSync from './hooks/useUrlSync.js';
 
-const VIEW_KEY = 'song-gallery:view';
+/* v2: la vista por defecto paso de lista a cuadricula. La clave vieja no sirve
+   para saber quien eligio la lista: se escribia en cada visita, asi que la
+   tiene todo el que haya pasado alguna vez. */
+const VIEW_KEY = 'song-gallery:view:v2';
 const INTRO_KEY = 'song-gallery:intro-seen'; // lo escribe Splash; aqui solo se consulta
+const TOUR_KEY = 'song-gallery:tour-seen';
 const HEARD_AFTER_MS = 10_000;
 const RADIO_HOP = 4; // canciones de cada fuente antes de que la radio salte a otra
 
@@ -157,9 +163,9 @@ export default function App() {
 
   const [view, setView] = useState(() => {
     try {
-      return localStorage.getItem(VIEW_KEY) === 'grid' ? 'grid' : 'list';
+      return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid';
     } catch {
-      return 'list';
+      return 'grid';
     }
   });
 
@@ -217,16 +223,15 @@ export default function App() {
   const [sortDir, setSortDir] = useState(1);
 
   /* Cuantas canciones se enseñan de la fuente que se esta viendo. Las del repo
-     —playlists fijas y albumes— todas; las playlists pegadas, hasta
-     CUSTOM_TRACKS. Un album del repo nunca se recorta: es una recomendacion, y
-     media recomendacion no es ninguna. */
-  const trackLimit = useMemo(
-    () =>
-      !isAlbum && entries.find((entry) => entry.id === currentId)?.custom
-        ? CUSTOM_TRACKS
-        : Infinity,
-    [entries, currentId, isAlbum],
-  );
+     —playlists fijas y albumes— todas, salvo las que traen su `limit` (los
+     Wrapped); las playlists pegadas, hasta CUSTOM_TRACKS. Un album del repo
+     nunca se recorta: es una recomendacion, y media recomendacion no es
+     ninguna. */
+  const trackLimit = useMemo(() => {
+    if (isAlbum) return Infinity;
+    const entry = entries.find((item) => item.id === currentId);
+    return entry?.limit ?? (entry?.custom ? CUSTOM_TRACKS : Infinity);
+  }, [entries, currentId, isAlbum]);
 
   // La playlist de recomendaciones lleva en la cabecera el botón para sumar una.
   const isRecsPlaylist =
@@ -711,7 +716,13 @@ export default function App() {
      visitante, y la radio es mi seleccion. */
   const allSources = useMemo(
     () => [
-      ...fixedEntries.map((entry) => ({ kind: 'playlist', id: entry.id, label: entry.label })),
+      /* El rotulo de un Wrapped es el año a secas, que fuera de sus chips no
+         dice de que es. */
+      ...fixedEntries.map((entry) => ({
+        kind: 'playlist',
+        id: entry.id,
+        label: entry.wrapped ? `Wrapped ${entry.label}` : entry.label,
+      })),
       ...ALBUM_ENTRIES.map((album) => ({ kind: 'album', id: album.id, label: album.label })),
     ],
     [fixedEntries],
@@ -833,6 +844,83 @@ export default function App() {
   }, [currentTrack]);
   const closeKeys = useCallback(() => setShowKeys(false), []);
 
+  /* «Cómo funciona». Sale solo una vez, con la fuente ya en pantalla y el
+     saludo fuera, y se marca al APARECER, como el splash: quien lo salte
+     tambien lo ha visto. `?tutorial` y Ctrl+Shift+R lo devuelven. */
+  const [showTour, setShowTour] = useState(false);
+  // El mismo corte que el menu y el riel: dice donde esta cada cosa.
+  const compact = useMediaQuery('(max-width: 720px)');
+  const tourChecked = useRef(false);
+  const closeTour = useCallback(() => setShowTour(false), []);
+  const openTour = useCallback(() => {
+    trackEvent('tour_open');
+    setShowKeys(false);
+    setShowTour(true);
+  }, []);
+
+  useEffect(() => {
+    if (tourChecked.current || !data || showSplash) return;
+    tourChecked.current = true;
+
+    const forced = new URLSearchParams(location.search).has('tutorial') || isHardReload();
+    try {
+      if (!forced && localStorage.getItem(TOUR_KEY)) return;
+      localStorage.setItem(TOUR_KEY, '1');
+    } catch {
+      /* modo privado: sale esta vez, y no hay donde recordar que salio */
+    }
+    setShowTour(true);
+  }, [data, showSplash]);
+
+  /* Las tarjetas, solo de lo que esta encendido: contar algo que no aparece
+     es peor que no contarlo. */
+  const tourSteps = useMemo(
+    () =>
+      [
+        {
+          title: 'Escuchar',
+          art: 'listen',
+          text: 'Tocá una canción y suena un fragmento de 30 segundos. «Al azar» elige una por vos, y tocando la portada de la que suena la ves en grande.',
+        },
+        {
+          title: 'Elegir qué escuchar',
+          art: compact ? 'choose-compact' : 'choose',
+          text: `${compact ? 'En el menú de arriba' : 'A la izquierda'} están mis playlists, los álbumes que vengo escuchando, «mi mes» y mis Wrapped de cada año.`,
+        },
+        moodEnabled && !compact && {
+          title: 'Buscar por ánimo',
+          art: 'mood',
+          text: 'Contale a la IA qué tenés ganas de escuchar —«algo para manejar de noche»— y arma una selección entre mis canciones.',
+        },
+        (similarEnabled || reactions.enabled) && {
+          title: 'En cada canción',
+          art: 'track',
+          artProps: { reactions: reactions.enabled, similar: similarEnabled },
+          text: `Mientras suena, su fila se abre con la ficha. Ahí ${
+            [
+              reactions.enabled && 'podés dejar una reacción',
+              similarEnabled && 'pedir «Parecidas a esta»: tres canciones nuevas del mismo estilo',
+            ]
+              .filter(Boolean)
+              .join(' y ')
+          }.`,
+        },
+        {
+          title: 'Al final de la lista',
+          art: 'end',
+          text: 'Prendé la radio, que salta por todo lo de la web al azar, o jugá a adivinar la canción por el fragmento.',
+        },
+        {
+          title: 'Tu turno',
+          art: 'turn',
+          text: `Si tenés una canción para mí, «Recomendame una» está siempre arriba.${
+            compact ? '' : ' Y con ? ves todos los atajos de teclado.'
+          }`,
+        },
+      ].filter(Boolean),
+    [compact, moodEnabled, similarEnabled, reactions.enabled],
+  );
+
   useKeyboard((event) => {
     // No robar teclas mientras se escribe o se ajusta la barra.
     if (event.target.closest?.('input, textarea, [role="slider"]')) return;
@@ -939,6 +1027,10 @@ export default function App() {
       case 'g':
         if (!bare(event)) break;
         openQuiz();
+        break;
+      case 'h':
+        if (!bare(event)) break;
+        openTour();
         break;
       default:
         break;
@@ -1188,9 +1280,6 @@ export default function App() {
               setAdding={setAdding}
               onSubmit={handleAddPlaylist}
               onRemove={handleRemovePlaylist}
-              /* Solo con la playlist ya en pantalla y el splash fuera: durante
-                 el saludo no se ve la barra, y el aviso se gastaria a solas. */
-              hint={Boolean(data) && !showSplash}
             />
             {data ? (
               <>
@@ -1221,13 +1310,13 @@ export default function App() {
           adding={adding}
           setAdding={setAdding}
           onSubmit={handleAddPlaylist}
-          /* Mismo permiso que le damos al menú de arriba: sólo con la fuente ya
-             en pantalla y el saludo fuera. */
-          hint={Boolean(data) && !showSplash}
         />
 
         <main>
-          {moodEnabled ? (
+          {/* En movil no hay busqueda por animo (el mismo corte de 720 px que
+              el menu). Un link compartido con `?mood=` sigue abriendo su
+              seleccion; lo que no hay es donde escribir una nueva. */}
+          {moodEnabled && !compact ? (
             <MoodSearch
               active={isMood && data?.kind === 'mood' ? data.name : null}
               busy={moodBusy || (isMood && loading)}
@@ -1412,6 +1501,7 @@ export default function App() {
                 radio={radio}
                 onRadio={allSources.length > 1 ? toggleRadio : null}
                 onQuiz={playableCount >= 4 ? openQuiz : null}
+                onTour={openTour}
               />
             </>
           ) : null}
@@ -1486,7 +1576,8 @@ export default function App() {
         onFocusRow={() => scrollTo(playingIndex)}
       />
 
-      {showKeys ? <ShortcutsPanel onClose={closeKeys} /> : null}
+      {showKeys ? <ShortcutsPanel onClose={closeKeys} onTour={openTour} /> : null}
+      {showTour ? <Tour steps={tourSteps} onClose={closeTour} /> : null}
 
       {/* Flota abajo a la izquierda; sube cuando asoma el mini para no taparlo. */}
       {/* Con el aviso de fin a la vista se retira: ocupan la misma franja. */}

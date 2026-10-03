@@ -13,6 +13,7 @@ export default function Footer({
   radio,
   onRadio,
   onQuiz,
+  onTour,
 }) {
   const [ref, visible] = useInView();
 
@@ -65,6 +66,16 @@ export default function Footer({
             </svg>
             {album ? 'Abrirlo en Spotify' : 'Abrirla en Spotify'}
           </a>
+        ) : null}
+
+        {onTour ? (
+          <button type="button" className="foot__action" onClick={onTour}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 11v5.5M12 7.6v.1" />
+            </svg>
+            Cómo funciona
+          </button>
         ) : null}
       </div>
 

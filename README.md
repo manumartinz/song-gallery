@@ -18,7 +18,9 @@ El volumen vive en la barra de arriba y se recuerda en el navegador. Abre a un
 sexto y va por debajo del techo del reproductor: los previews llegan
 normalizados muy arriba, así que el 100% del mando no es el 100% del audio. Con
 teclado, `+` y `-` mueven y `m` silencia. El resto de atajos (`n`/`p` para
-siguiente y anterior, `s` al azar, `/` buscar…) salen con `?`. En Safari de iOS `volume` es de sólo
+siguiente y anterior, `s` al azar, `/` buscar…) salen con `?`. «Cómo funciona», unas pocas
+tarjetas con lo que se puede hacer en la web, sale solo en la primera visita, después del
+saludo; se vuelve a abrir con `h`, desde el pie o con `?tutorial` en la URL. En Safari de iOS `volume` es de sólo
 lectura, así que allí el nivel viaja por una ganancia de Web Audio —el mismo
 grafo del ecualizador—, que de paso le devuelve el crossfade.
 
@@ -62,6 +64,15 @@ resto. Las del repo se ven enteras. La diferencia no es estética: resolver los
 previews de una playlist ajena de 200 pistas son cinco funciones y doscientas
 consultas a Deezer, y hay un límite de peticiones por IP que conviene gastar en
 lo que el visitante vino a escuchar.
+
+## Wrapped
+
+Debajo de las playlists hay un bloque «Mis Wrapped», con un año por chip. Están
+en `src/config/wrapped.js`. No son las playlists «Tus canciones favoritas» que
+arma Spotify, que están bloqueadas en la API como las demás de Spotify, sino
+copias públicas en mi cuenta. Se copian las cien canciones y se ven las
+primeras `WRAPPED_TRACKS` (30); enseñar más es cambiar ese número. Los previews
+se resuelven sólo para las que se ven.
 
 ## Álbumes
 

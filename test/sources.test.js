@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { WRAPPED_TRACKS } from '../src/config/wrapped.js';
 import {
+  FIXED_ENTRIES,
   MAX_CUSTOM,
   mergePreviews,
   paramFor,
@@ -7,6 +9,7 @@ import {
   toAlbumEntries,
   toCustomEntries,
   toEntries,
+  toWrappedEntries,
 } from '../src/lib/sources.js';
 
 const A = 'a'.repeat(22);
@@ -73,6 +76,24 @@ describe('toEntries / toCustomEntries / toAlbumEntries', () => {
       { id: A, label: 'Uno' },
       { id: B, label: 'Dos' },
     ]);
+  });
+});
+
+describe('toWrappedEntries', () => {
+  it('un año por entrada, con su tope y sin los links rotos', () => {
+    const entries = toWrappedEntries([
+      { year: 2025, ref: `https://open.spotify.com/playlist/${A}` },
+      { year: 2024, ref: 'nada' },
+      { year: 2023, ref: `spotify:playlist:${B}` },
+    ]);
+    expect(entries).toEqual([
+      { id: A, label: '2025', ref: `https://open.spotify.com/playlist/${A}`, wrapped: true, limit: WRAPPED_TRACKS },
+      { id: B, label: '2023', ref: `spotify:playlist:${B}`, wrapped: true, limit: WRAPPED_TRACKS },
+    ]);
+  });
+
+  it('un Wrapped nunca es la portada', () => {
+    expect(FIXED_ENTRIES[0]?.wrapped).toBeFalsy();
   });
 });
 
